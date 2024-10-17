@@ -29,7 +29,7 @@
                     <a-form-item ref="gmail" label="電子郵件" name="email">
                         <a-input v-model:value="formState.email" />
                     </a-form-item>
-                    <a-form-item :wrapper-col="{ span: 14, offset: 4 }">
+                    <a-form-item :wrapper-col="{ span: 14, offset: 4 }" style="text-align: center;">
                         <a-button type="primary" @click="onSubmit">註冊</a-button>
                         <a-button style="margin-left: 10px" @click="resetForm">取消</a-button>
                     </a-form-item>
@@ -80,7 +80,7 @@ const formState: UnwrapRef<FormState> = reactive({
 const validatePass = async (_rule: Rule, value: string) => {
     if (value === '' || /\s/.test(value)) {
         return Promise.reject('密碼不可為空或含空白');
-    } 
+    }
     else {
         if (formState.checkPasswd !== '') {
             formRef.value.validateFields('checkPasswd');

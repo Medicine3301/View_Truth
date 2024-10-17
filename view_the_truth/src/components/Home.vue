@@ -428,6 +428,19 @@ const onFinish = (values: any) => {
 const onFinishFailed = (errorInfo: any) => {
     console.log('Failed:', errorInfo);
 };
+
+//登入部分
+import { useAuthStore } from '../stores/auth'
+
+const authStore = useAuthStore()
+
+// 登入
+const handleLogin = async () => {
+    const success = await authStore.login(formState.username, formState.password)
+    if (success) {
+        // 導航到首頁或其他頁面
+    }
+}
 </script>
 
 <style scoped>

@@ -1,0 +1,176 @@
+from sanic import Sanic
+from sanic.response import json
+from sanic_cors import CORS
+import aiomysql
+import jwt
+import bcrypt
+import uuid
+from datetime import datetime, timedelta
+
+# 創建Sanic應用
+app = Sanic("auth_app")
+# 啟用CORS支持
+CORS(app)
+
+# JWT配置
+SECRET_KEY = "therealeyecanseethetruth"
+
+# 數據庫配置
+DB_CONFIG = {
+    "host": "127.0.0.1",
+    "user": "root",
+    "password": "1258hjh3967",
+    "db": "new_community",
+    "charset": "utf8mb4",
+}
+
+
+# 在服務器啟動前創建數據庫連接池
+@app.listener("before_server_start")
+async def setup_db(app, loop):
+    app.ctx.pool = await aiomysql.create_pool(**DB_CONFIG, loop=loop, autocommit=True)
+
+
+# 輔助函數：根據用戶名查詢用戶
+async def get_user_by_username(pool, username):
+    async with pool.acquire() as conn:
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute("SELECT * FROM users WHERE una = %s", (username,))
+            return await cur.fetchone()
+
+
+# 註冊路由
+@app.post("/api/register")
+async def register(request):
+    """用戶註冊API
+
+    接收：
+    - name: 用戶名
+    - email: 郵箱
+    - password: 密碼
+    - sex: 性別
+    - age: 年齡
+    """
+    try:
+        data = request.json
+
+        # 檢查用戶名是否已存在
+        existing_user = await get_user_by_username(app.ctx.pool, data["name"])
+        if existing_user:
+            return json({"error": "用戶名已存在"}, status=400)
+
+        # 生成唯一用戶ID
+        uid = str(uuid.uuid4())
+
+        # 密碼加密
+        salt = bcrypt.gensalt()
+        hashed_password = bcrypt.hashpw(data["password"].encode(), salt)
+        # 將收到的 ISO 格式日期轉換為 'YYYY-MM-DD'
+        iso_birthday = data["birthday"]
+        birthday_date = datetime.fromisoformat(
+            iso_birthday
+        ).date()  # 使用 datetime 類的 fromisoformat 方法
+        # 插入用戶數據
+        async with app.ctx.pool.acquire() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(
+                    """
+                    INSERT INTO users (uid, una, birthday, usex, email, passwd)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """,
+                    (
+                        uid,
+                        data["name"],
+                        birthday_date,
+                        data["sex"],
+                        data["email"],
+                        hashed_password.decode(),
+                    ),
+                )
+
+        return json({"message": "註冊成功"}, status=201)
+
+    except Exception as e:
+        return json({"error": str(e)}, status=400)
+
+
+# 登入路由
+@app.post("/api/login")
+async def login(request):
+    """用戶登入API
+
+    接收：
+    - username: 用戶名
+    - password: 密碼
+    """
+    try:
+        data = request.json
+        # 查詢用戶
+        user = await get_user_by_username(app.ctx.pool, data["username"])
+
+        if not user:
+            return json({"error": "用戶不存在"}, status=404)
+
+        # 驗證密碼
+        if not bcrypt.checkpw(data["password"].encode(), user["passwd"].encode()):
+            return json({"error": "密碼錯誤"}, status=401)
+
+        # 生成JWT token
+        token = jwt.encode(
+            {
+                "uid": user["uid"],
+                "exp": datetime.utcnow() + timedelta(days=1),  # token有效期1天
+            },
+            SECRET_KEY,
+            algorithm="HS256",
+        )
+
+        return json(
+            {
+                "token": token,
+                "user": {
+                    "uid": user["uid"],
+                    "una": user["una"],
+                    "email": user["email"],
+                },
+            }
+        )
+
+    except Exception as e:
+        return json({"error": str(e)}, status=400)
+
+
+# Token驗證路由
+@app.get("/api/verify")
+async def verify(request):
+    """驗證token有效性API"""
+    try:
+        # 從header中獲取token
+        token = request.headers.get("Authorization", "").replace("Bearer ", "")
+        # 解碼token
+        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+
+        # 查詢用戶信息
+        async with app.ctx.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute(
+                    "SELECT uid, una, email FROM users WHERE uid = %s",
+                    (payload["uid"],),
+                )
+                user = await cur.fetchone()
+
+                if not user:
+                    return json({"error": "用戶不存在"}, status=404)
+
+                return json({"user": user})
+
+    except jwt.ExpiredSignatureError:
+        return json({"error": "Token已過期"}, status=401)
+    except jwt.InvalidTokenError:
+        return json({"error": "無效的Token"}, status=401)
+    except Exception as e:
+        return json({"error": str(e)}, status=400)
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8000)

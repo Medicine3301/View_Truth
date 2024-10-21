@@ -2,13 +2,16 @@
     <a-layout class="layout">
         <a-page-header style="border: 1px solid rgb(235, 237, 240)" title="註冊" @back="goBack" />
         <a-layout-content style="padding: 0 50px">
-            <div :style="{
-                background: '#fff', padding: '24px', minHeight: '280px', margin: '16px',
-            }">
+            <div class="form-container">
                 <a-form ref="formRef" :model="formState" :rules="rules" :label-col="labelCol" :wrapper-col="wrapperCol">
                     <a-form-item ref="name" label="用戶名稱" name="name">
-                        <a-input v-model:value="formState.name" />
+                        <a-input v-model:value="formState.name" placeholder="請輸入3-5個字的用戶名">
+                            <template #prefix>
+                                <UserOutlined />
+                            </template>
+                        </a-input>
                     </a-form-item>
+
                     <a-form-item label="性別" name="sex">
                         <a-radio-group v-model:value="formState.sex">
                             <a-radio value="1">男性</a-radio>
@@ -16,22 +19,45 @@
                             <a-radio value="3">其他</a-radio>
                         </a-radio-group>
                     </a-form-item>
+
                     <a-form-item label="生日" required name="birthday">
-                        <a-date-picker v-model:value="formState.birthday" type="date" placeholder="請選擇生日日期"
-                            style="width: 100%" />
+                        <a-date-picker v-model:value="formState.birthday" :disabled-date="disabledDate"
+                            placeholder="請選擇生日日期" style="width: 100%" />
                     </a-form-item>
+
                     <a-form-item has-feedback label="密碼" name="passwd">
-                        <a-input v-model:value="formState.passwd" type="password" autocomplete="off" />
+                        <a-input-password v-model:value="formState.passwd" placeholder="請設置密碼">
+                            <template #prefix>
+                                <LockOutlined />
+                            </template>
+                        </a-input-password>
                     </a-form-item>
-                    <a-form-item has-feedback label="再次輸入密碼" name="checkPasswd">
-                        <a-input v-model:value="formState.checkPasswd" type="password" autocomplete="off" />
+
+                    <a-form-item has-feedback label="確認密碼" name="checkPasswd">
+                        <a-input-password v-model:value="formState.checkPasswd" placeholder="請再次輸入密碼">
+                            <template #prefix>
+                                <LockOutlined />
+                            </template>
+                        </a-input-password>
                     </a-form-item>
-                    <a-form-item ref="gmail" label="電子郵件" name="email">
-                        <a-input v-model:value="formState.email" />
+
+                    <a-form-item label="電子郵件" name="email">
+                        <a-input v-model:value="formState.email" placeholder="請輸入電子郵件">
+                            <template #prefix>
+                                <MailOutlined />
+                            </template>
+                        </a-input>
                     </a-form-item>
-                    <a-form-item :wrapper-col="{ span: 14, offset: 4 }" style="text-align: center;">
-                        <a-button type="primary" @click="onSubmit">註冊</a-button>
-                        <a-button style="margin-left: 10px" @click="resetForm">取消</a-button>
+
+                    <a-form-item :wrapper-col="{ span: 14, offset: 4 }">
+                        <a-space>
+                            <a-button type="primary" :loading="loading" @click="onSubmit">
+                                註冊
+                            </a-button>
+                            <a-button @click="resetForm">
+                                重置
+                            </a-button>
+                        </a-space>
                     </a-form-item>
                 </a-form>
             </div>
@@ -41,20 +67,15 @@
         </a-layout-footer>
     </a-layout>
 </template>
+
 <script lang="ts" setup>
 import { useRouter } from 'vue-router';
-//router
-const router = useRouter(); // 使用 useRouter 來獲取 router 實例
-
-const goBack = (): void => { // 定義 goBack 函數
-    router.push({ name: 'home' }); // 使用 vue-router 導航回首頁
-};
-
-//表單部分
 import { Dayjs } from 'dayjs';
-import { reactive, ref, toRaw } from 'vue';
+import { reactive, ref } from 'vue';
 import type { UnwrapRef } from 'vue';
 import type { Rule } from 'ant-design-vue/es/form';
+import { UserOutlined, LockOutlined, MailOutlined } from '@ant-design/icons-vue';
+import { useAuthStore } from '../stores/auth';
 
 interface FormState {
     name: string;
@@ -64,9 +85,15 @@ interface FormState {
     checkPasswd: string;
     email: string;
 }
+
+const router = useRouter();
+const authStore = useAuthStore();
 const formRef = ref();
+const loading = ref(false);
+
 const labelCol = { span: 5 };
 const wrapperCol = { span: 13 };
+
 const formState: UnwrapRef<FormState> = reactive({
     name: '',
     birthday: undefined,
@@ -76,84 +103,139 @@ const formState: UnwrapRef<FormState> = reactive({
     email: '',
 });
 
-//檢查輸入部分
-const validatePass = async (_rule: Rule, value: string) => {
-    if (value === '' || /\s/.test(value)) {
-        return Promise.reject('密碼不可為空或含空白');
-    }
-    else {
-        if (formState.checkPasswd !== '') {
-            formRef.value.validateFields('checkPasswd');
-        }
-        return Promise.resolve();
-    }
+// 禁用未來日期
+const disabledDate = (current: Dayjs) => {
+    return current && current.valueOf() > Date.now();
 };
+
+// 表單驗證規則
+const validatePass = async (_rule: Rule, value: string) => {
+    if (value === '') {
+        return Promise.reject('請輸入密碼');
+    }
+    if (/\s/.test(value)) {
+        return Promise.reject('密碼不能包含空格');
+    }
+    if (value.length < 8) {
+        return Promise.reject('密碼長度至少為8個字符');
+    }
+    if (!/[A-Z]/.test(value)) {
+        return Promise.reject('密碼必須包含至少一個大寫字母');
+    }
+    if (!/[a-z]/.test(value)) {
+        return Promise.reject('密碼必須包含至少一個小寫字母');
+    }
+    if (!/[0-9]/.test(value)) {
+        return Promise.reject('密碼必須包含至少一個數字');
+    }
+    if (formState.checkPasswd !== '') {
+        formRef.value.validateFields(['checkPasswd']);
+    }
+    return Promise.resolve();
+};
+
 const validatePass2 = async (_rule: Rule, value: string) => {
     if (value === '') {
         return Promise.reject('請再次輸入密碼');
-    } else if (value !== formState.passwd) {
-        return Promise.reject("輸入的密碼不一致!");
-    } else {
-        return Promise.resolve();
     }
+    if (value !== formState.passwd) {
+        return Promise.reject('兩次輸入的密碼不一致');
+    }
+    return Promise.resolve();
 };
+
 const validateEmail = async (_rule: Rule, value: string) => {
     const emailPattern = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
     if (value === '') {
         return Promise.reject('請輸入電子郵件');
-    } else if (!emailPattern.test(value)) {
-        return Promise.reject('電子郵件格式不正確');
-    } else {
-        return Promise.resolve();
     }
+    if (!emailPattern.test(value)) {
+        return Promise.reject('電子郵件格式不正確');
+    }
+    return Promise.resolve();
 };
 
 const rules: Record<string, Rule[]> = {
     name: [
         { required: true, message: '請輸入用戶名稱', trigger: 'change' },
-        { min: 3, max: 5, message: '長度必須3-5個字', trigger: 'blur' },
+        { min: 3, max: 6, message: '長度必須為3-12個字', trigger: 'blur' },
     ],
-    birthday: [{ required: true, message: '請選擇生日日期', trigger: 'change', type: 'object' }],
-    sex: [{ required: true, message: '請選擇您的性別', trigger: 'change' }],
-    passwd: [{ required: true, validator: validatePass, trigger: 'change' }],
-    checkPasswd: [{ validator: validatePass2, trigger: 'change' }],
-    email: [{ required: true, validator: validateEmail, trigger: 'blur' }], // 添加電子郵件格式驗證
+    birthday: [
+        { required: true, message: '請選擇生日日期', trigger: 'change', type: 'object' }
+    ],
+    sex: [
+        { required: true, message: '請選擇性別', trigger: 'change' }
+    ],
+    passwd: [
+        { required: true, validator: validatePass, trigger: 'change' }
+    ],
+    checkPasswd: [
+        { required: true, validator: validatePass2, trigger: 'change' }
+    ],
+    email: [
+        { required: true, validator: validateEmail, trigger: 'blur' }
+    ],
 };
-const onSubmit = () => {
-    formRef.value
-        .validate()
-        .then(() => {
-            console.log('values', formState, toRaw(formState));
-        })
-        .catch(error => {
-            console.log('error', error);
+
+
+const onSubmit = async () => {
+    try {
+        loading.value = true;
+        await formRef.value.validate();
+
+        if (!formState.birthday) {
+            return;
+        }
+
+        // 將 Dayjs 物件轉換為原生 Date 類型
+        const birthdayDate = formState.birthday.toDate();
+
+        const success = await authStore.register({
+            name: formState.name,
+            email: formState.email,
+            password: formState.passwd,
+            sex: formState.sex,
+            birthday: birthdayDate,  // 直接傳遞 Date 類型
         });
+
+        if (success) {
+            router.push('/');
+        }
+    } finally {
+        loading.value = false;
+    }
 };
+
 const resetForm = () => {
     formRef.value.resetFields();
 };
+
+const goBack = () => {
+    router.push({ name: 'home' });
+};
 </script>
+
 <style scoped>
-.site-layout-content {
-    min-height: 280px;
-    padding: 24px;
+.layout {
+    min-height: 100vh;
+}
+
+.form-container {
     background: #fff;
+    padding: 24px;
+    min-height: 280px;
+    margin: 16px;
+    border-radius: 4px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
-#components-layout-demo-top .logo {
-    float: left;
-    width: 120px;
-    height: 31px;
-    margin: 16px 24px 16px 0;
-    background: rgba(255, 255, 255, 0.3);
+.ant-form {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 24px 0;
 }
 
-.ant-row-rtl #components-layout-demo-top .logo {
-    float: right;
-    margin: 16px 0 16px 24px;
-}
-
-[data-theme='dark'] .site-layout-content {
+[data-theme='dark'] .form-container {
     background: #141414;
 }
 </style>

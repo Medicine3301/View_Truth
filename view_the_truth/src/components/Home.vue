@@ -18,155 +18,86 @@
                 </a-menu-item>
                 <a-menu-item-group key="g1" title="討論看板" style="margin-top: 20px;"
                     :style="{ overflow: 'auto', height: 'calc(100vh - 200px)', paddingRight: '5px' }">
-                    <a-menu-item key="4">
-                        <a-avatar :size="30" style="margin-right: 10px;">
-                            <template #icon>
-                                <img src="/public/img/unnamed.jpg" alt="">
-                            </template>
-                        </a-avatar>
-                        <span class="nav-text">閒聊</span>
-                    </a-menu-item>
-                    <a-menu-item key="5">
-                        <a-avatar :size="30" style="margin-right: 10px;">
-                            <template #icon>
-                                <img src="/public/img/unnamed.jpg" alt="">
-                            </template>
-                        </a-avatar>
-                        <span class="nav-text">闢謠</span>
-                    </a-menu-item>
-                    <a-menu-item key="6">
-                        <a-avatar :size="30" style="margin-right: 10px;">
-                            <template #icon>
-                                <img src="/public/img/unnamed.jpg" alt="">
-                            </template>
-                        </a-avatar>
-                        <span class="nav-text">八卦</span>
-                    </a-menu-item>
-                    <a-menu-item key="7">
-                        <a-avatar :size="30" style="margin-right: 10px;">
-                            <template #icon>
-                                <img src="/public/img/unnamed.jpg" alt="">
-                            </template>
-                        </a-avatar>
-                        <span class="nav-text">新聞</span>
-                    </a-menu-item>
-                    <a-menu-item key="8">
-                        <a-avatar :size="30" style="margin-right: 10px;">
-                            <template #icon>
-                                <img src="/public/img/unnamed.jpg" alt="">
-                            </template>
-                        </a-avatar>
-                        <span class="nav-text">科技</span>
-                    </a-menu-item>
-                    <a-menu-item key="9">
-                        <a-avatar :size="30" style="margin-right: 10px;">
-                            <template #icon>
-                                <img src="/public/img/unnamed.jpg" alt="">
-                            </template>
-                        </a-avatar>
-                        <span class="nav-text">動漫</span>
-                    </a-menu-item>
-                    <a-menu-item key="10">
-                        <a-avatar :size="30" style="margin-right: 10px;">
-                            <template #icon>
-                                <img src="/public/img/unnamed.jpg" alt="">
-                            </template>
-                        </a-avatar>
-                        <span class="nav-text">繪圖</span>
-                    </a-menu-item>
-                    <a-menu-item key="11">
-                        <a-avatar :size="30" style="margin-right: 10px;">
-                            <template #icon>
-                                <img src="/public/img/unnamed.jpg" alt="">
-                            </template>
-                        </a-avatar>
-                        <span class="nav-text">迷因</span>
-                    </a-menu-item>
-                    <a-menu-item key="12">
-                        <a-avatar :size="30" style="margin-right: 10px;">
-                            <template #icon>
-                                <img src="/public/img/unnamed.jpg" alt="">
-                            </template>
-                        </a-avatar>
-                        <span class="nav-text">政治</span>
-                    </a-menu-item>
-                    <a-menu-item key="13">
-                        <a-avatar :size="30" style="margin-right: 10px;">
-                            <template #icon>
-                                <img src="/public/img/unnamed.jpg" alt="">
-                            </template>
-                        </a-avatar>
-                        <span class="nav-text">遊戲</span>
-                    </a-menu-item>
-                    <a-menu-item key="14">
-                        <a-avatar :size="30" style="margin-right: 10px;">
-                            <template #icon>
-                                <img src="/public/img/unnamed.jpg" alt="">
-                            </template>
-                        </a-avatar>
-                        <span class="nav-text">感情</span>
-                    </a-menu-item>
-                    <a-menu-item key="15">
-                        <a-avatar :size="30" style="margin-right: 10px;">
-                            <template #icon>
-                                <img src="/public/img/unnamed.jpg" alt="">
-                            </template>
-                        </a-avatar>
-                        <span class="nav-text">文學</span>
-                    </a-menu-item>
-                    <a-menu-item key="16">
-                        <a-avatar :size="30" style="margin-right: 10px;">
-                            <template #icon>
-                                <img src="/public/img/unnamed.jpg" alt="">
-                            </template>
-                        </a-avatar>
-                        <span class="nav-text">股票</span>
-                    </a-menu-item>
+                    <!-- 討論版列表項目 -->
+                    <template v-for="board in boards" :key="board.key">
+                        <a-menu-item :is="board.key">
+                            <a-avatar :size="30" style="margin-right: 10px;">
+                                <template #icon>
+                                    <img src="/public/img/unnamed.jpg" :alt="board.name">
+                                </template>
+                            </a-avatar>
+                            <span class="nav-text">{{ board.name }}</span>
+                        </a-menu-item>
+                    </template>
                 </a-menu-item-group>
             </a-menu>
         </a-layout-sider>
         <a-layout :style="{ marginLeft: layoutMargin }">
+            <!-- 頂部Header -->
             <a-layout-header :style="{ background: '#fff', padding: 0 }">
-                <!--搜尋框-->
-                <a-input-search v-model:value="value" style="width: 300px;margin-top: 15px;margin-left: 20px;"
+                <!-- 搜尋框 -->
+                <a-input-search v-model:value="searchValue" style="width: 300px;margin-top: 15px;margin-left: 20px;"
                     placeholder="搜尋關鍵字" enter-button @search="onSearch" />
-                <!--登入按鈕、視窗-->
-                <div style="position: absolute;
-                 right: 20px;
-                 display: inline-block;">
-                    <a-button type="primary" @click="showModal">登入</a-button>
-                    <a-modal v-model:open="open" title="登入" :centered="true" :footer="null" :width="400">
-                        <a-form :model="formState" name="basic" @finish="onFinish" @finishFailed="onFinishFailed"
-                            :style="{ textAlign: 'center' }">
-                            <a-form-item name="username" :rules="[{ required: true, message: '請輸入使用者名稱！' }]"
-                                :style="{ marginBottom: '24px' }">
-                                <a-input v-model:value="formState.username" placeholder="使用者名稱">
+
+                <!-- 用戶操作區域 -->
+                <div style="position: absolute; right: 20px; display: inline-block;">
+                    <!-- 根據登入狀態顯示不同內容 -->
+                    <template v-if="authStore.isAuthenticated">
+                        <a-dropdown>
+                            <a class="ant-dropdown-link" @click.prevent>
+                                <a-avatar style="margin-right: 8px;">
+                                    {{ authStore.user?.una?.charAt(0).toUpperCase() }}
+                                </a-avatar>
+                                {{ authStore.user?.una }}
+                            </a>
+                            <template #overlay>
+                                <a-menu>
+                                    <a-menu-item @click="handleLogout">
+                                        登出
+                                    </a-menu-item>
+                                </a-menu>
+                            </template>
+                        </a-dropdown>
+                    </template>
+                    <template v-else>
+                        <a-button type="primary" @click="showLoginModal">登入</a-button>
+                    </template>
+
+                    <!-- 登入彈窗 -->
+                    <a-modal v-model:open="loginModalVisible" title="登入" :centered="true" :footer="null" :width="400"
+                        @cancel="handleLoginCancel">
+                        <a-form :model="loginForm" @finish="handleLoginSubmit" :style="{ textAlign: 'center' }">
+                            <!-- 用戶名輸入 -->
+                            <a-form-item name="username" :rules="[{ required: true, message: '請輸入使用者名稱！' }]">
+                                <a-input v-model:value="loginForm.username" placeholder="使用者名稱">
                                     <template #prefix>
                                         <UserOutlined />
                                     </template>
                                 </a-input>
                             </a-form-item>
 
-                            <a-form-item name="password" :rules="[{ required: true, message: '請輸入密碼！' }]"
-                                :style="{ marginBottom: '24px' }">
-                                <a-input-password v-model:value="formState.password" placeholder="密碼">
+                            <!-- 密碼輸入 -->
+                            <a-form-item name="password" :rules="[{ required: true, message: '請輸入密碼！' }]">
+                                <a-input-password v-model:value="loginForm.password" placeholder="密碼">
                                     <template #prefix>
                                         <LockOutlined />
                                     </template>
                                 </a-input-password>
                             </a-form-item>
 
+                            <!-- 記住我和註冊連結 -->
                             <div
                                 style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                                <a-checkbox v-model:checked="formState.remember">記住我</a-checkbox>
+                                <a-checkbox v-model:checked="loginForm.remember">記住我</a-checkbox>
                                 <router-link to="/register" style="color: #1890ff;">還沒註冊嗎?</router-link>
                             </div>
 
+                            <!-- 提交按鈕 -->
                             <div style="display: flex; justify-content: center; gap: 16px;">
-                                <a-button type="primary" html-type="submit" :loading="loading">
+                                <a-button type="primary" html-type="submit" :loading="loginLoading">
                                     登入
                                 </a-button>
-                                <a-button @click="handleCancel">
+                                <a-button @click="handleLoginCancel">
                                     取消
                                 </a-button>
                             </div>
@@ -355,92 +286,109 @@
 <script lang="ts" setup>
 import { computed, ref, reactive } from 'vue';
 import { UserOutlined, VideoCameraOutlined, UploadOutlined, FireFilled, BellFilled, FireOutlined, BellOutlined, NotificationOutlined } from '@ant-design/icons-vue';
-import { RouterLink } from 'vue-router';
-
-//響應式相關
-const collapsed = ref(false);
-const broken = ref(false);
-const layoutMargin = computed(() => {
-    if (broken.value) {
-        return collapsed.value ? '0px' : '200px';
-    }
-    return '200px';
-});
-const onCollapse = (isCollapsed: boolean, type: string) => {
-    console.log(isCollapsed, type);
-    collapsed.value = isCollapsed;
-};
-
-const onBreakpoint = (isBroken: boolean) => {
-    console.log(isBroken);
-    broken.value = isBroken;
-};
-
-const selectedKeys = ref<string[]>(['4']);
-
-const value = ref<string>('');
-//搜尋相關
-const onSearch = (searchValue: string) => {
-    console.log('use value', searchValue);
-    console.log('or use this.value', value.value);
-};
-// 表單相關
-interface FormState {
-    username: string;
-    password: string;
-    remember: boolean;
-}
-
-const formState = reactive<FormState>({
-    username: '',
-    password: '',
-    remember: true,
-});
-
-const open = ref<boolean>(false);
-const loading = ref<boolean>(false);
-
-const showModal = () => {
-    open.value = true;
-};
-
-const handleCancel = () => {
-    open.value = false;
-    // 重置表單
-    formState.username = '';
-    formState.password = '';
-    formState.remember = true;
-};
-
-const onFinish = (values: any) => {
-    loading.value = true;
-    setTimeout(() => {
-        console.log('Success:', values);
-        loading.value = false;
-        open.value = false;
-        // 重置表單
-        formState.username = '';
-        formState.password = '';
-        formState.remember = true;
-    }, 2000);
-};
-
-const onFinishFailed = (errorInfo: any) => {
-    console.log('Failed:', errorInfo);
-};
-
-//登入部分
+import { RouterLink, useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth'
+// 路由實例
+const router = useRouter()
 
+// 認證store
 const authStore = useAuthStore()
 
-// 登入
-const handleLogin = async () => {
-    const success = await authStore.login(formState.username, formState.password)
-    if (success) {
-        // 導航到首頁或其他頁面
+// 側邊欄狀態
+const collapsed = ref(false)
+const broken = ref(false)
+
+// 計算側邊欄寬度
+const layoutMargin = computed(() => {
+    if (broken.value) {
+        return collapsed.value ? '0px' : '200px'
+    }
+    return '200px'
+})
+
+// 側邊欄摺疊處理
+const onCollapse = (isCollapsed: boolean, type: string) => {
+    console.log(isCollapsed, type)
+    collapsed.value = isCollapsed
+}
+
+// 響應式斷點處理
+const onBreakpoint = (isBroken: boolean) => {
+    console.log(isBroken)
+    broken.value = isBroken
+}
+
+// 選中的菜單項
+const selectedKeys = ref<string[]>(['4'])
+
+// 搜尋相關
+const searchValue = ref<string>('')
+const onSearch = (searchValue: string) => {
+    console.log('搜尋值:', searchValue)
+}
+
+// 討論版列表數據
+const boards = [
+    { key: '4', name: '閒聊' },
+    { key: '5', name: '闢謠' },
+    { key: '6', name: '八卦' },
+    { key: '7', name: '新聞' },
+    { key: '8', name: '科技' },
+    { key: '9', name: '動漫' },
+    { key: '10', name: '繪圖' },
+    { key: '11', name: '迷因' },
+    { key: '12', name: '政治' },
+    { key: '13', name: '遊戲' },
+    { key: '14', name: '感情' },
+    { key: '15', name: '文學' },
+    { key: '16', name: '股票' },
+]
+
+// 登入表單相關
+const loginModalVisible = ref<boolean>(false)
+const loginLoading = ref<boolean>(false)
+const loginForm = reactive({
+    username: '',
+    password: '',
+    remember: true
+})
+
+// 顯示登入視窗
+const showLoginModal = () => {
+    loginModalVisible.value = true
+}
+
+// 處理登入取消
+const handleLoginCancel = () => {
+    loginModalVisible.value = false
+    // 重置表單
+    loginForm.username = ''
+    loginForm.password = ''
+    loginForm.remember = true
+}
+
+// 處理登入提交
+const handleLoginSubmit = async () => {
+    try {
+        loginLoading.value = true
+        const success = await authStore.login(loginForm.username, loginForm.password)
+
+        if (success) {
+            loginModalVisible.value = false
+            // 重置表單
+            handleLoginCancel()
+        }
+    } finally {
+        loginLoading.value = false
     }
 }
+
+// 處理登出
+const handleLogout = () => {
+    authStore.logout()
+    router.push('/')
+}
+
 </script>
 
 <style scoped>

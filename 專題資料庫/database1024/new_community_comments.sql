@@ -16,29 +16,34 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
--- Table structure for table `collect`
+-- Table structure for table `comments`
 --
 
-DROP TABLE IF EXISTS `collect`;
+DROP TABLE IF EXISTS `comments`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `collect` (
-  `pid` varchar(50) NOT NULL,
-  `uid` varchar(200) NOT NULL,
-  PRIMARY KEY (`pid`,`uid`),
-  KEY `uid` (`uid`),
-  CONSTRAINT `collect_ibfk_1` FOREIGN KEY (`pid`) REFERENCES `post` (`pid`),
-  CONSTRAINT `collect_ibfk_2` FOREIGN KEY (`uid`) REFERENCES `users` (`uid`)
+CREATE TABLE `comments` (
+  `pid` varchar(50) DEFAULT NULL,
+  `comm_id` varchar(50) NOT NULL,
+  `uid` varchar(200) DEFAULT NULL,
+  `title` varchar(50) DEFAULT NULL,
+  `content` varchar(50) DEFAULT NULL,
+  `nid` varchar(50) DEFAULT NULL,
+  PRIMARY KEY (`comm_id`),
+  KEY `pid` (`pid`),
+  KEY `nid` (`nid`),
+  CONSTRAINT `comments_ibfk_1` FOREIGN KEY (`pid`) REFERENCES `post` (`pid`),
+  CONSTRAINT `comments_ibfk_2` FOREIGN KEY (`nid`) REFERENCES `news` (`news_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `collect`
+-- Dumping data for table `comments`
 --
 
-LOCK TABLES `collect` WRITE;
-/*!40000 ALTER TABLE `collect` DISABLE KEYS */;
-/*!40000 ALTER TABLE `collect` ENABLE KEYS */;
+LOCK TABLES `comments` WRITE;
+/*!40000 ALTER TABLE `comments` DISABLE KEYS */;
+/*!40000 ALTER TABLE `comments` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -50,4 +55,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-10-24 10:59:58
+-- Dump completed on 2024-10-24 11:33:41

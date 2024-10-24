@@ -1,8 +1,10 @@
--- MySQL dump 10.13  Distrib 8.0.40, for Win64 (x86_64)
+CREATE DATABASE  IF NOT EXISTS `new_community` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
+USE `new_community`;
+-- MySQL dump 10.13  Distrib 8.0.37, for Win64 (x86_64)
 --
 -- Host: localhost    Database: new_community
 -- ------------------------------------------------------
--- Server version	8.0.40
+-- Server version	8.0.37
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -16,32 +18,33 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
--- Table structure for table `users`
+-- Table structure for table `community`
 --
 
-DROP TABLE IF EXISTS `users`;
+DROP TABLE IF EXISTS `community`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `users` (
-  `uid` varchar(200) NOT NULL,
-  `una` varchar(20) DEFAULT NULL,
-  `uage` int DEFAULT NULL,
-  `usex` varchar(20) DEFAULT NULL,
-  `phone` varchar(15) DEFAULT NULL,
-  `email` varchar(30) DEFAULT NULL,
-  `passwd` varchar(100) DEFAULT NULL,
-  PRIMARY KEY (`uid`),
-  CONSTRAINT `users_chk_1` CHECK (((`uage` > 0) and (`uage` <= 70)))
+CREATE TABLE `community` (
+  `crea_id` varchar(20) DEFAULT NULL,
+  `cid` varchar(20) NOT NULL,
+  `cna` varchar(50) DEFAULT NULL,
+  `descr` text,
+  `crea_na` varchar(50) DEFAULT NULL,
+  `crea_date` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `last_update` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`cid`),
+  KEY `crea_id` (`crea_id`),
+  CONSTRAINT `community_ibfk_1` FOREIGN KEY (`crea_id`) REFERENCES `users` (`uid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `users`
+-- Dumping data for table `community`
 --
 
-LOCK TABLES `users` WRITE;
-/*!40000 ALTER TABLE `users` DISABLE KEYS */;
-/*!40000 ALTER TABLE `users` ENABLE KEYS */;
+LOCK TABLES `community` WRITE;
+/*!40000 ALTER TABLE `community` DISABLE KEYS */;
+/*!40000 ALTER TABLE `community` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -53,4 +56,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-10-24 10:59:58
+-- Dump completed on 2024-10-15 15:25:29

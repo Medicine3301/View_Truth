@@ -16,30 +16,33 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
--- Table structure for table `news`
+-- Table structure for table `community`
 --
 
-DROP TABLE IF EXISTS `news`;
+DROP TABLE IF EXISTS `community`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `news` (
-  `newstitle` varchar(20) DEFAULT NULL,
-  `news_id` varchar(50) NOT NULL,
-  `journ` varchar(30) DEFAULT NULL,
-  `crea_date` datetime DEFAULT NULL,
-  `newsclass` varchar(10) DEFAULT NULL,
-  `count` int DEFAULT NULL,
-  PRIMARY KEY (`news_id`)
+CREATE TABLE `community` (
+  `crea_id` varchar(200) DEFAULT NULL,
+  `cid` varchar(20) NOT NULL,
+  `cna` varchar(50) DEFAULT NULL,
+  `descr` text,
+  `crea_na` varchar(50) DEFAULT NULL,
+  `crea_date` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `last_update` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`cid`),
+  KEY `crea_id` (`crea_id`),
+  CONSTRAINT `community_ibfk_1` FOREIGN KEY (`crea_id`) REFERENCES `users` (`uid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `news`
+-- Dumping data for table `community`
 --
 
-LOCK TABLES `news` WRITE;
-/*!40000 ALTER TABLE `news` DISABLE KEYS */;
-/*!40000 ALTER TABLE `news` ENABLE KEYS */;
+LOCK TABLES `community` WRITE;
+/*!40000 ALTER TABLE `community` DISABLE KEYS */;
+/*!40000 ALTER TABLE `community` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -51,4 +54,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-10-24 11:33:41
+-- Dump completed on 2024-10-24 15:35:33

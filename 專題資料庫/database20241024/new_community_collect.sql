@@ -16,33 +16,29 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
--- Table structure for table `community`
+-- Table structure for table `collect`
 --
 
-DROP TABLE IF EXISTS `community`;
+DROP TABLE IF EXISTS `collect`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `community` (
-  `crea_id` varchar(200) DEFAULT NULL,
-  `cid` varchar(20) NOT NULL,
-  `cna` varchar(50) DEFAULT NULL,
-  `descr` text,
-  `crea_na` varchar(50) DEFAULT NULL,
-  `crea_date` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `last_update` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`cid`),
-  KEY `crea_id` (`crea_id`),
-  CONSTRAINT `community_ibfk_1` FOREIGN KEY (`crea_id`) REFERENCES `users` (`uid`)
+CREATE TABLE `collect` (
+  `pid` varchar(50) NOT NULL,
+  `uid` varchar(200) NOT NULL,
+  PRIMARY KEY (`pid`,`uid`),
+  KEY `uid` (`uid`),
+  CONSTRAINT `collect_ibfk_1` FOREIGN KEY (`pid`) REFERENCES `post` (`pid`),
+  CONSTRAINT `collect_ibfk_2` FOREIGN KEY (`uid`) REFERENCES `users` (`uid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `community`
+-- Dumping data for table `collect`
 --
 
-LOCK TABLES `community` WRITE;
-/*!40000 ALTER TABLE `community` DISABLE KEYS */;
-/*!40000 ALTER TABLE `community` ENABLE KEYS */;
+LOCK TABLES `collect` WRITE;
+/*!40000 ALTER TABLE `collect` DISABLE KEYS */;
+/*!40000 ALTER TABLE `collect` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -54,4 +50,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-10-24 11:33:41
+-- Dump completed on 2024-10-24 15:35:33

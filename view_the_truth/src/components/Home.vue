@@ -16,6 +16,22 @@
                     <FireOutlined />
                     <span class="nav-text">熱門消息</span>
                 </a-menu-item>
+                <!-- 僅管理員可見的菜單 -->
+                <a-menu-item-group v-if="isAdmin" key="gadmin" title="管理面板" style="margin-top: 20px;">
+                    <!-- 討論版列表項目 -->
+                    <a-menu-item key="adminPanel1">
+                        <PieChartOutlined />
+                        <span class="nav-text">網站數據管理</span>
+                    </a-menu-item>
+                    <a-menu-item key="adminPanel2">
+                        <UserOutlined />
+                        <span class="nav-text">用戶管理</span>
+                    </a-menu-item>
+                    <a-menu-item key="adminPanel3">
+                        <VideoCameraOutlined />
+                        <span class="nav-text">新聞內容管理</span>
+                    </a-menu-item>
+                </a-menu-item-group>
                 <a-menu-item-group key="g1" title="討論看板" style="margin-top: 20px;"
                     :style="{ overflow: 'auto', height: 'calc(100vh - 200px)', paddingRight: '5px' }">
                     <!-- 討論版列表項目 -->
@@ -36,7 +52,7 @@
             <!-- 頂部Header -->
             <a-layout-header :style="{ background: '#fff', padding: 0 }">
                 <!-- 搜尋框 -->
-                <a-input-search v-model:value="searchValue" style="width: 300px;margin-top: 15px;margin-left: 20px;"
+                <a-input-search v-model:value="searchValue" style="width: 150px;margin-top: 15px;margin-left: 20px;"
                     placeholder="搜尋關鍵字" enter-button @search="onSearch" />
 
                 <!-- 用戶操作區域 -->
@@ -48,10 +64,12 @@
                                 <a-avatar style="margin-right: 8px;">
                                     {{ authStore.user?.una?.charAt(0).toUpperCase() }}
                                 </a-avatar>
-                                {{ authStore.user?.una }}
                             </a>
                             <template #overlay>
                                 <a-menu>
+                                    <a-menu-item>
+                                        用戶專區
+                                    </a-menu-item>
                                     <a-menu-item @click="handleLogout">
                                         登出
                                     </a-menu-item>
@@ -288,12 +306,15 @@ import { computed, ref, reactive } from 'vue';
 import { UserOutlined, VideoCameraOutlined, UploadOutlined, FireFilled, BellFilled, FireOutlined, BellOutlined, NotificationOutlined } from '@ant-design/icons-vue';
 import { RouterLink, useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth'
+
+
 // 路由實例
 const router = useRouter()
 
 // 認證store
 const authStore = useAuthStore()
-
+// 判斷是否為管理員
+const isAdmin = computed(() => authStore.isAdmin);
 // 側邊欄狀態
 const collapsed = ref(false)
 const broken = ref(false)

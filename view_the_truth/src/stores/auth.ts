@@ -7,6 +7,7 @@ interface UserState {
         uid: string
         una: string
         email: string
+        role:string
         avatar?: string
     } | null
     isAuthenticated: boolean
@@ -25,7 +26,11 @@ export const useAuthStore = defineStore('auth', {
         user: null,
         isAuthenticated: false
     }),
-
+    getters: {
+        isAdmin(state): boolean {
+            return state.user?.role === 'admin';
+        }
+    },
     actions: {
         async login(username: string, password: string) {
             try {

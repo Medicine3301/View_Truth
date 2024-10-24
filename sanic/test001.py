@@ -132,6 +132,7 @@ async def login(request):
                     "uid": user["uid"],
                     "una": user["una"],
                     "email": user["email"],
+                    "role":user["role"]
                 },
             }
         )
@@ -154,7 +155,7 @@ async def verify(request):
         async with app.ctx.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 await cur.execute(
-                    "SELECT uid, una, email FROM users WHERE uid = %s",
+                    "SELECT uid, una, email ,role FROM users WHERE uid = %s",
                     (payload["uid"],),
                 )
                 user = await cur.fetchone()

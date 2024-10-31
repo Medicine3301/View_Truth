@@ -7,10 +7,17 @@ interface UserState {
         uid: string
         una: string
         email: string
-        role:string
+        role: string
         avatar?: string
     } | null
     isAuthenticated: boolean
+    otherUser: {
+        uid: string
+        una: string
+        email: string
+        role: string
+        avatar?: string
+    } | null
 }
 
 interface RegisterUserData {
@@ -24,7 +31,8 @@ interface RegisterUserData {
 export const useAuthStore = defineStore('auth', {
     state: (): UserState => ({
         user: null,
-        isAuthenticated: false
+        isAuthenticated: false,
+        otherUser: null
     }),
     getters: {
         isAdmin(state): boolean {
@@ -127,6 +135,27 @@ export const useAuthStore = defineStore('auth', {
                 notification.error({
                     message: '驗證失敗',
                     description: '請重新登入系統',
+                    duration: 3
+                })
+            }
+        },
+
+        async getUserInfo(uid: string) {
+            try {
+                const response = await axios.get(`http://localhost:8000/api/user/${uid}`)
+                if (response.status === 200) {
+                    this.otherUser = response.data.user
+                } else {
+                    notification.error({
+                        message: '用戶不存在',
+                        description: '無法找到該用戶的信息',
+                        duration: 3
+                    })
+                }
+            } catch (error: any) {
+                notification.error({
+                    message: '獲取用戶信息失敗',
+                    description: error.response?.data?.error || '請稍後再試',
                     duration: 3
                 })
             }

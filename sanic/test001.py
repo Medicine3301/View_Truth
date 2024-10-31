@@ -19,7 +19,7 @@ SECRET_KEY = "therealeyecanseethetruth"
 DB_CONFIG = {
     "host": "127.0.0.1",
     "user": "root",
-    "password": "123456",
+    "password": "1passwds",
     "db": "new_community",
     "charset": "utf8mb4",
 }
@@ -132,7 +132,7 @@ async def login(request):
                     "uid": user["uid"],
                     "una": user["una"],
                     "email": user["email"],
-                    "role":user["role"]
+                    "role": user["role"],
                 },
             }
         )
@@ -169,6 +169,25 @@ async def verify(request):
         return json({"error": "Token已過期"}, status=401)
     except jwt.InvalidTokenError:
         return json({"error": "無效的Token"}, status=401)
+    except Exception as e:
+        return json({"error": str(e)}, status=400)
+    # 查詢特定用戶信息的API
+
+
+@app.get("/api/user/<uid>")
+async def get_user_info(request, uid):
+    """獲取特定用戶信息API"""
+    try:
+        async with app.ctx.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute(
+                    "SELECT uid, una, email, role FROM users WHERE uid = %s", (uid,)
+                )
+                user = await cur.fetchone()
+                if not user:
+                    return json({"error": "用戶不存在"}, status=404)
+
+                return json({"user": user}, status=200)
     except Exception as e:
         return json({"error": str(e)}, status=400)
 

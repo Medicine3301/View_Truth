@@ -71,8 +71,8 @@
                             </a>
                             <template #overlay>
                                 <a-menu>
-                                    <a-menu-item>
-                                        用戶專區
+                                    <a-menu-item @click="goToUserProfile">
+                                        用戶區
                                     </a-menu-item>
                                     <a-menu-item @click="handleLogout">
                                         登出
@@ -397,7 +397,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref, reactive } from 'vue';
+import { computed, ref, reactive, onMounted } from 'vue';
 import { UserOutlined, VideoCameraOutlined, UploadOutlined, FireFilled, BellFilled, FireOutlined, BellOutlined, NotificationOutlined } from '@ant-design/icons-vue';
 import { RouterLink, useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth'
@@ -504,6 +504,14 @@ const handleLogout = () => {
     authStore.logout()
     router.push('/')
 }
+const goToUserProfile = () => {
+    if (authStore.user && authStore.user.uid) {
+        // 跳轉到用戶個人資料頁面
+        router.push({ name: 'userprofile', params: { id: authStore.user.uid } });
+    } else {
+        console.error('未登入或無法取得用戶ID');
+    }
+};
 
 </script>
 

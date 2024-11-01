@@ -19,7 +19,7 @@ SECRET_KEY = "therealeyecanseethetruth"
 DB_CONFIG = {
     "host": "127.0.0.1",
     "user": "root",
-    "password": "1passwds",
+    "password": "123456",
     "db": "new_community",
     "charset": "utf8mb4",
 }
@@ -49,7 +49,7 @@ async def register(request):
     - email: 郵箱
     - password: 密碼
     - sex: 性別
-    - age: 年齡
+    - birthday: 生日
     """
     try:
         data = request.json

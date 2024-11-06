@@ -2,11 +2,13 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 import Home from './components/Home.vue'
 import Register from './components/Register.vue'
 import Userprofile from './components/userprofile.vue'
+import Community from './components/community.vue'
 
 const routes = [
     { path: '/', component: Home, name: 'home' },
     { path: '/register', component: Register, name: 'rigister' },
     { path: '/userprofile/:id', component: Userprofile, name: 'userprofile' },
+    { path: '/Community/:id', component: Community, name: 'community' },
 ]
 
 const router = createRouter({

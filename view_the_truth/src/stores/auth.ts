@@ -2,7 +2,9 @@ import { defineStore } from 'pinia'
 import axios from 'axios'
 import { notification } from 'ant-design-vue'
 
+//宣告
 interface UserState {
+    //登入用
     user: {
         uid: string
         una: string
@@ -11,6 +13,7 @@ interface UserState {
         avatar?: string
     } | null
     isAuthenticated: boolean
+    //顯示用
     otherUser: {
         uid: string
         una: string
@@ -19,7 +22,14 @@ interface UserState {
         avatar?: string
     } | null
 }
-
+//社群
+interface Community {
+    name:string 
+    descript:string
+    comment_count:string 
+    last_update:Date
+}
+//註冊
 interface RegisterUserData {
     name: string
     email: string
@@ -28,6 +38,7 @@ interface RegisterUserData {
     birthday: Date
 }
 
+//狀態管理
 export const useAuthStore = defineStore('auth', {
     state: (): UserState => ({
         user: null,
@@ -39,6 +50,7 @@ export const useAuthStore = defineStore('auth', {
             return state.user?.role === 'admin';
         }
     },
+    //各式功能函數
     actions: {
         async login(username: string, password: string) {
             try {

@@ -12,6 +12,7 @@
     "@ant-design/icons-vue": "^7.0.1",
     "ant-design-vue": "^4.2.5",
     "axios": "^1.7.7",
+    "date-fns": "^4.1.0",
     "element-plus": "^2.8.4",
     "pinia": "^2.2.2",
     "vue": "^3.4.37",

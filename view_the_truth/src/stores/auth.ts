@@ -2,9 +2,8 @@ import { defineStore } from 'pinia'
 import axios from 'axios'
 import { notification } from 'ant-design-vue'
 
-//宣告
+// 宣告
 interface UserState {
-    //登入用
     user: {
         uid: string
         una: string
@@ -13,7 +12,6 @@ interface UserState {
         avatar?: string
     } | null
     isAuthenticated: boolean
-    //顯示用
     otherUser: {
         uid: string
         una: string
@@ -22,14 +20,17 @@ interface UserState {
         avatar?: string
     } | null
 }
-//社群
-interface Community {
-    name:string 
-    descript:string
-    comment_count:string 
-    last_update:Date
+
+interface CommunityState {
+    community: {
+        cid: string
+        name: string
+        descript: string
+        comment_count: string
+        last_update: Date
+    } | null
 }
-//註冊
+
 interface RegisterUserData {
     name: string
     email: string
@@ -38,90 +39,94 @@ interface RegisterUserData {
     birthday: Date
 }
 
-//狀態管理
+// 狀態管理
 export const useAuthStore = defineStore('auth', {
-    state: (): UserState => ({
-        user: null,
-        isAuthenticated: false,
-        otherUser: null
+    state:(): { userState: UserState; communityState: CommunityState } => ({
+        userState: {
+            user: null,
+            isAuthenticated: false,
+            otherUser: null
+        },
+        communityState: {
+            community: null
+        }
     }),
     getters: {
         isAdmin(state): boolean {
-            return state.user?.role === 'admin';
+            return state.userState.user?.role === 'admin';
         }
     },
-    //各式功能函數
     actions: {
         async login(username: string, password: string) {
             try {
                 const response = await axios.post('http://localhost:8000/api/login', {
                     username,
                     password
-                })
+                });
 
                 if (response.status === 200) {
-                    this.user = response.data.user
-                    this.isAuthenticated = true
-                    localStorage.setItem('token', response.data.token)
+                    this.userState.user = response.data.user;
+                    this.userState.isAuthenticated = true;
+                    localStorage.setItem('token', response.data.token);
                     notification.success({
                         message: '登入成功',
                         description: '歡迎回來！',
                         duration: 3
-                    })
-                    return true
+                    });
+                    return true;
                 }
-                return false
+                return false;
             } catch (error: any) {
-                const errorMessage = error.response?.data?.error || '登入失敗，請稍後再試'
+                const errorMessage = error.response?.data?.error || '登入失敗，請稍後再試';
                 notification.error({
                     message: '登入失敗',
                     description: errorMessage,
                     duration: 3
-                })
-                return false
+                });
+                return false;
             }
         },
 
         async register(userData: RegisterUserData) {
             try {
-                const response = await axios.post('http://localhost:8000/api/register', userData)
+                const response = await axios.post('http://localhost:8000/api/register', userData);
 
                 if (response.status === 201) {
                     notification.success({
                         message: '註冊成功',
                         description: '請登入以繼續',
                         duration: 3
-                    })
-                    return true
+                    });
+                    return true;
                 }
-                return false
+                return false;
             } catch (error: any) {
-                const errorMessage = error.response?.data?.error || '註冊失敗，請稍後再試'
+                const errorMessage = error.response?.data?.error || '註冊失敗，請稍後再試';
                 notification.error({
                     message: '註冊失敗',
                     description: errorMessage,
                     duration: 3
-                })
-                return false
+                });
+                return false;
             }
         },
 
         logout() {
-            this.user = null
-            this.isAuthenticated = false
-            localStorage.removeItem('token')
+            this.userState.user = null;
+            this.userState.isAuthenticated = false;
+            localStorage.removeItem('token');
             notification.info({
                 message: '已登出',
                 description: '您已成功登出系統',
                 duration: 3
-            })
+            });
         },
 
         async checkAuth() {
-            const token = localStorage.getItem('token')
+            const token = localStorage.getItem('token');
             if (!token) {
-                this.logout()
-                return
+                this.logout();
+                return;
             }
 
             try {
@@ -129,78 +134,99 @@ export const useAuthStore = defineStore('auth', {
                     headers: {
                         Authorization: `Bearer ${token}`
                     }
-                })
+                });
 
                 if (response.status === 200) {
-                    this.user = response.data.user
-                    this.isAuthenticated = true
+                    this.userState.user = response.data.user;
+                    this.userState.isAuthenticated = true;
                 } else {
-                    this.logout()
+                    this.logout();
                     notification.warn({
                         message: '會話過期',
                         description: '請重新登入',
                         duration: 3
-                    })
+                    });
                 }
             } catch (error) {
-                this.logout()
+                this.logout();
                 notification.error({
                     message: '驗證失敗',
                     description: '請重新登入系統',
                     duration: 3
-                })
+                });
             }
         },
 
         async getUserInfo(uid: string) {
             try {
-                const response = await axios.get(`http://localhost:8000/api/user/${uid}`)
+                const response = await axios.get(`http://localhost:8000/api/user/${uid}`);
                 if (response.status === 200) {
-                    this.otherUser = response.data.user
+                    this.userState.otherUser = response.data.user;
                 } else {
                     notification.error({
                         message: '用戶不存在',
                         description: '無法找到該用戶的信息',
                         duration: 3
-                    })
+                    });
                 }
             } catch (error: any) {
                 notification.error({
                     message: '獲取用戶信息失敗',
                     description: error.response?.data?.error || '請稍後再試',
                     duration: 3
-                })
+                });
+            }
+        },
+
+        async getCommunityInfo(cid: string) {
+            try {
+                const response = await axios.get(`http://localhost:8000/api/community/${cid}`);
+                if (response.status === 200) {
+                    this.communityState.community = response.data.community;
+                } else {
+                    notification.error({
+                        message: '社群不存在',
+                        description: '無法找到該社群',
+                        duration: 3
+                    });
+                }
+            } catch (error: any) {
+                notification.error({
+                    message: '獲取社群信息失敗',
+                    description: error.response?.data?.error || '請稍後再試',
+                    duration: 3
+                });
             }
         },
 
         setupAxiosInterceptors() {
             axios.interceptors.request.use(
                 config => {
-                    const token = localStorage.getItem('token')
+                    const token = localStorage.getItem('token');
                     if (token) {
-                        config.headers.Authorization = `Bearer ${token}`
+                        config.headers.Authorization = `Bearer ${token}`;
                     }
-                    return config
+                    return config;
                 },
                 error => {
-                    return Promise.reject(error)
+                    return Promise.reject(error);
                 }
-            )
+            );
 
             axios.interceptors.response.use(
                 response => response,
                 error => {
                     if (error.response?.status === 401) {
-                        this.logout()
+                        this.logout();
                         notification.error({
                             message: '會話過期',
                             description: '請重新登入系統',
                             duration: 3
-                        })
+                        });
                     }
-                    return Promise.reject(error)
+                    return Promise.reject(error);
                 }
-            )
+            );
         }
     }
-})
+});

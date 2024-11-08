@@ -190,7 +190,23 @@ async def get_user_info(request, uid):
                 return json({"user": user}, status=200)
     except Exception as e:
         return json({"error": str(e)}, status=400)
+    
+@app.get("/api/community/<cid>")
+async def get_community_info(request, cid):
+    """獲取特定社群信息API"""
+    try:
+        async with app.ctx.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute(
+                    "SELECT cid, cna, descr FROM community WHERE cid = %s", (cid,)
+                )
+                community = await cur.fetchone()
+                if not community:
+                    return json({"error": "討論區不存在"}, status=404)
 
+                return json({"community": community}, status=200)
+    except Exception as e:
+        return json({"error": str(e)}, status=400)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000)

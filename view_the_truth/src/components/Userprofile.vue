@@ -21,12 +21,12 @@ export default {
         const route = useRoute();
 
         // 當組件掛載時，根據路由參數查詢用戶信息
-        onMounted(() => {
+        onMounted(async () => {
             const userId = route.params.id;
-            authStore.getUserInfo(userId);
+            await authStore.getUserInfo(userId);
         });
 
-        const otherUser = computed(() => authStore.otherUser);
+        const otherUser = computed(() => authStore.userState.otherUser);
 
         return {
             otherUser,

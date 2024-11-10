@@ -38,16 +38,17 @@
                 <a-menu-item-group key="g1" title="討論看板" style="margin-top: 20px;"
                     :style="{ overflow: 'auto', height: '350px', paddingRight: '5px' }">
                     <!-- 討論版列表項目 -->
-                    <template v-for="board in authStore.communityState.community" :key="board.cid">
+                    <template v-for="board in authStore.communityState.communities" :key="board.cid">
                         <a-menu-item @click="goToCommunity(board.cid)">
                             <a-avatar :size="30" style="margin-right: 10px;">
                                 <template #icon>
-                                    <img src="/public/img/unnamed.jpg" :alt="board.name" />
+                                    <img src="/public/img/unnamed.jpg" :alt="board.cna" />
                                 </template>
                             </a-avatar>
-                            <span class="nav-text">{{ board.name }}</span>
+                            <span class="nav-text">{{ board.cna }}</span>
                         </a-menu-item>
                     </template>
+
                 </a-menu-item-group>
             </a-menu>
         </a-layout-sider>
@@ -139,7 +140,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref, reactive } from 'vue';
+import { computed, ref, reactive, onMounted } from 'vue';
 import { UserOutlined, VideoCameraOutlined, FireOutlined, NotificationOutlined, LockOutlined } from '@ant-design/icons-vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
@@ -243,6 +244,9 @@ const goToUserProfile = () => {
 const goToCommunity = (communityId: string) => {
     router.push({ name: 'community', params: { cid: communityId } });
 };
+onMounted(async () => {
+    await authStore.getAllCommunities();
+});
 </script>
 
 <style scoped>

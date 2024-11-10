@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import axios from 'axios'
 import { notification } from 'ant-design-vue'
+import { onMounted } from 'vue';
 
 // 宣告
 interface UserState {
@@ -21,14 +22,16 @@ interface UserState {
     } | null
 }
 
+interface Community {
+    cid: string
+    cna: string
+    descr: string
+    last_update: string
+}
+
 interface CommunityState {
-    community: {
-        cid: string
-        name: string
-        descript: string
-        comment_count: string
-        last_update: Date
-    } | null
+    community: Community | null
+    communities: Community[] | null
 }
 
 interface RegisterUserData {
@@ -41,14 +44,15 @@ interface RegisterUserData {
 
 // 狀態管理
 export const useAuthStore = defineStore('auth', {
-    state:(): { userState: UserState; communityState: CommunityState } => ({
+    state: (): { userState: UserState; communityState: CommunityState } => ({
         userState: {
             user: null,
             isAuthenticated: false,
             otherUser: null
         },
         communityState: {
-            community: null
+            community: null,
+            communities: null
         }
     }),
     getters: {
@@ -198,7 +202,26 @@ export const useAuthStore = defineStore('auth', {
                 });
             }
         },
-
+        async getAllCommunities() {
+            try {
+                const response = await axios.get('http://localhost:8000/api/community/all');
+                if (response.status === 200) {
+                    this.communityState.communities = response.data.communities as Community[];
+                } else {
+                    notification.error({
+                        message: '沒有找到任何社群',
+                        description: '目前沒有可用的社群資料',
+                        duration: 3
+                    });
+                }
+            } catch (error: any) {
+                notification.error({
+                    message: '獲取所有社群信息失敗',
+                    description: error.response?.data?.error || '請稍後再試',
+                    duration: 3
+                });
+            }
+        },
         setupAxiosInterceptors() {
             axios.interceptors.request.use(
                 config => {

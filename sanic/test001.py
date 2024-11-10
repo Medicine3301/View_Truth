@@ -7,6 +7,7 @@ import bcrypt
 import uuid
 from datetime import datetime, timedelta
 
+
 # 創建Sanic應用
 app = Sanic("auth_app")
 # 啟用CORS支持
@@ -19,7 +20,7 @@ SECRET_KEY = "therealeyecanseethetruth"
 DB_CONFIG = {
     "host": "127.0.0.1",
     "user": "root",
-    "password": "123456",
+    "password": "1258hjh3967",
     "db": "new_community",
     "charset": "utf8mb4",
 }
@@ -49,7 +50,7 @@ async def register(request):
     - email: 郵箱
     - password: 密碼
     - sex: 性別
-    - birthday: 生日
+    - age: 年齡
     """
     try:
         data = request.json
@@ -190,7 +191,41 @@ async def get_user_info(request, uid):
                 return json({"user": user}, status=200)
     except Exception as e:
         return json({"error": str(e)}, status=400)
-    
+
+
+@app.get("/api/community/all")
+async def get_all_communities(request):
+    """獲取所有社群信息的 API"""
+    try:
+        async with app.ctx.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute("SELECT cid, cna, descr, last_update FROM community")
+                communities = await cur.fetchall()
+
+                if not communities:
+                    return json({"error": "沒有找到任何社群"}, status=404)
+
+                # 處理每個社群的數據
+                response = [
+                    {
+                        "cid": community["cid"],
+                        "cna": community["cna"],
+                        "descr": community["descr"],
+                        "last_update": (
+                            community["last_update"].isoformat()
+                            if community["last_update"]
+                            else None
+                        ),
+                    }
+                    for community in communities
+                ]
+
+                return json({"communities": response}, status=200)
+    except Exception as e:
+        print(f"Error in get_all_communities: {str(e)}")
+        return json({"error": str(e)}, status=400)
+
+
 @app.get("/api/community/<cid>")
 async def get_community_info(request, cid):
     """獲取特定社群信息API"""
@@ -198,15 +233,26 @@ async def get_community_info(request, cid):
         async with app.ctx.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 await cur.execute(
-                    "SELECT cid, cna, descr FROM community WHERE cid = %s", (cid,)
+                    "SELECT cid, cna, descr, last_update FROM community WHERE cid = %s",
+                    (cid,),
                 )
                 community = await cur.fetchone()
                 if not community:
-                    return json({"error": "討論區不存在"}, status=404)
+                    return json({"error": "社群不存在"}, status=404)
+
+                # 處理 datetime
+                community = dict(community)
+                community["last_update"] = (
+                    community["last_update"].isoformat()
+                    if community["last_update"]
+                    else None
+                )
 
                 return json({"community": community}, status=200)
     except Exception as e:
+        print(f"Error in get_community_info: {str(e)}")
         return json({"error": str(e)}, status=400)
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000)

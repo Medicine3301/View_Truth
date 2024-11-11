@@ -20,7 +20,7 @@ SECRET_KEY = "therealeyecanseethetruth"
 DB_CONFIG = {
     "host": "127.0.0.1",
     "user": "root",
-    "password": "123456",
+    "password": "123456SSSS",
     "db": "new_community",
     "charset": "utf8mb4",
 }
@@ -228,10 +228,10 @@ async def get_all_communities(request):
 
 @app.get("/api/community/<cid>")
 async def get_community_info(request, cid):
-    """獲取特定社群信息API"""
     try:
         async with app.ctx.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
+                print(f"查詢社群ID: {cid}")
                 await cur.execute(
                     "SELECT cid, cna, descr, last_update FROM community WHERE cid = %s",
                     (cid,),
@@ -251,6 +251,43 @@ async def get_community_info(request, cid):
                 return json({"community": community}, status=200)
     except Exception as e:
         print(f"Error in get_community_info: {str(e)}")
+        return json({"error": str(e)}, status=400)
+
+
+@app.get("/api/post/<cid>")
+async def get_all_post(request):
+    """獲取所有社群貼文信息的 API"""
+    try:
+        async with app.ctx.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute(
+                    "SELECT pid, cid, uid, una,title,content,comm_count,crea_date FROM community"
+                )
+                posts = await cur.fetchall()
+
+                if not posts:
+                    return json({"error": "找尋不到任何貼文"}, status=404)
+
+                # 處理每個社群的數據
+                response = [
+                    {
+                        "pid": post["pid"],
+                        "cid": post["cid"],
+                        "uid": post["uid"],
+                        "una": post["una"],
+                        "title": post["title"],
+                        "content": post["content"],
+                        "comm_count": post["comm_count"],
+                        "crea_date": (
+                            post["crea_date"].isoformat() if post["crea_date"] else None
+                        ),
+                    }
+                    for post in posts
+                ]
+
+                return json({"posts": response}, status=200)
+    except Exception as e:
+        print(f"Error in get_all_posts: {str(e)}")
         return json({"error": str(e)}, status=400)
 
 

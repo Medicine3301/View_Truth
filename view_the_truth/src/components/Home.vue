@@ -242,7 +242,7 @@ const goToUserProfile = () => {
 
 // 跳轉到社群頁面
 const goToCommunity = (communityId: string) => {
-    router.push({ name: 'community', params: { cid: communityId } });
+    router.push({ name: 'community', params: { id: communityId } });
 };
 onMounted(async () => {
     await authStore.getAllCommunities();

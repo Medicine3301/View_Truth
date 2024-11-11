@@ -28,12 +28,23 @@ interface Community {
     descr: string
     last_update: string
 }
-
+interface post {
+    pid: string
+    cid: string
+    uid: string
+    una: string
+    title: string
+    content: string
+    crea_date: string
+}
 interface CommunityState {
     community: Community | null
     communities: Community[] | null
 }
-
+interface Poststate {
+    post: post | null
+    posts: post[] | null
+}
 interface RegisterUserData {
     name: string
     email: string
@@ -44,7 +55,10 @@ interface RegisterUserData {
 
 // 狀態管理
 export const useAuthStore = defineStore('auth', {
-    state: (): { userState: UserState; communityState: CommunityState } => ({
+    state: (): {
+        userState: UserState; communityState: CommunityState
+        postState: Poststate;
+    } => ({
         userState: {
             user: null,
             isAuthenticated: false,
@@ -53,6 +67,10 @@ export const useAuthStore = defineStore('auth', {
         communityState: {
             community: null,
             communities: null
+        },
+        postState: {
+            post: null,
+            posts: null
         }
     }),
     getters: {

@@ -240,6 +240,26 @@ export const useAuthStore = defineStore('auth', {
                 });
             }
         },
+        async getAllPosts(cid:string) {
+            try {
+                const response = await axios.get(`http://localhost:8000/api/post/${cid}`);
+                if (response.status === 200) {
+                    this.postStateState.posts = response.data.posts as post[];
+                } else {
+                    notification.error({
+                        message: '沒有找到任何貼文',
+                        description: '目前沒有可用的貼文資料',
+                        duration: 3
+                    });
+                }
+            } catch (error: any) {
+                notification.error({
+                    message: '獲取所有貼文信息失敗',
+                    description: error.response?.data?.error || '請稍後再試',
+                    duration: 3
+                });
+            }
+        },
         setupAxiosInterceptors() {
             axios.interceptors.request.use(
                 config => {

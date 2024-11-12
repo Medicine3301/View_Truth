@@ -22,12 +22,14 @@ export default {
     // 當組件掛載時，根據路由參數查詢社群信息
     onMounted(async () => {
       const communityId = route.params.id; // 獲取路由中的社群 ID
-      console.log("查詢的社群 ID:", communityId);  // 檢查這裡的社群 ID
-      await communityStore.getCommunityInfo(communityId); // 調用 Pinia store 的方法
+      await communityStore.getCommunityInfo(communityId); // 調用 Pinia store 的方法取得所有社群表資訊
+      await communityStore.getAllPosts(communityId); //調用 Pinia store 的方法取得所有該社群的貼文
     });
 
     // 計算屬性用來訪問 store 中的社群數據
     const community = computed(() => communityStore.communityState.community);
+    //貼文的數據
+    const posts = computed(() => communityStore.postState.posts);
 
     return {
       community,

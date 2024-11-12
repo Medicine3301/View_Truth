@@ -20,7 +20,7 @@ SECRET_KEY = "therealeyecanseethetruth"
 DB_CONFIG = {
     "host": "127.0.0.1",
     "user": "root",
-    "password": "123456",
+    "password": "1258hjh3967",
     "db": "new_community",
     "charset": "utf8mb4",
 }
@@ -255,14 +255,15 @@ async def get_community_info(request, cid):
 
 
 @app.get("/api/post/<cid>")
-async def get_all_post(request):
+async def get_all_post(request, cid):
     """獲取所有社群貼文信息的 API"""
     try:
         async with app.ctx.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 await cur.execute(
-                    "SELECT pid, cid, uid, una,title,content,comm_count,crea_date FROM community"
-                )
+                    "SELECT pid, cid, uid, una,title,content,comm_count,crea_date FROM post where cid=%s",
+                    (cid,),
+                ),
                 posts = await cur.fetchall()
 
                 if not posts:
@@ -288,6 +289,33 @@ async def get_all_post(request):
                 return json({"posts": response}, status=200)
     except Exception as e:
         print(f"Error in get_all_posts: {str(e)}")
+        return json({"error": str(e)}, status=400)
+
+
+@app.get("/api/post/<pid>")
+async def get_all_post(request, pid):
+    """獲取所有社群貼文信息的 API"""
+    try:
+        async with app.ctx.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute(
+                    "SELECT pid, cid, uid, una,title,content,comm_count,crea_date FROM post where pid=%s",
+                    (pid,),
+                ),
+                post = await cur.fetchall()
+
+                if not post:
+                    return json({"error": "找尋不到該貼文"}, status=404)
+
+                # 處理 datetime
+                post = dict(post)
+                post["crea_date"] = (
+                    post["crea_date"].isoformat() if post["crea_date"] else None
+                )
+
+                return json({"post": post}, status=200)
+    except Exception as e:
+        print(f"Error in get_post_info: {str(e)}")
         return json({"error": str(e)}, status=400)
 
 

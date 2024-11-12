@@ -7,10 +7,21 @@
   <div v-else>
     <p>正在加載社群信息...</p>
   </div>
+  <div v-if="posts">
+    <div v-for="post in posts" :key="post.cid">
+      <h2>{{ post.title }}</h2>
+      <p>{{ post.content }}</p>
+      <p>發言人:{{ post.una }}</p>
+      <p>{{ post.crea_date }}</p>
+    </div>
+  </div>
+  <div v-else>
+    <p>正在加載社群貼文訊息</p>
+  </div>
 </template>
 
 <script>
-import { useAuthStore } from '../stores/auth'; // 假設你把管理社群信息的部分放到 `community` store 中
+import { useAuthStore } from '../stores/auth';
 import { onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 
@@ -33,6 +44,7 @@ export default {
 
     return {
       community,
+      posts
     };
   },
 };

@@ -308,7 +308,7 @@ async def get_post_info(request, pid):
                 if not post:
                     return json({"error": "找尋不到該貼文"}, status=404)
 
-                # 處理 datetime
+                # 處理 datetime轉換格式
                 post = dict(post)
                 post["crea_date"] = (
                     post["crea_date"].isoformat() if post["crea_date"] else None
@@ -319,7 +319,38 @@ async def get_post_info(request, pid):
         print(f"Error in get_post_info: {str(e)}")
         return json({"error": str(e)}, status=400)
 
+@app.get("/api/comment/<pid>")
+async def get_all_comment(request, pid):
+    """獲取所有貼文留言信息的 API"""
+    try:
+        async with app.ctx.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute(
+                    "SELECT pid, uid,comm_id,nid,title,content FROM comments where pid=%s",
+                    (pid,),
+                ),
+                comments = await cur.fetchall()
 
+                if not comments:
+                    return json({"error": "找尋不到任何留言"}, status=404)
+
+                # 處理每個留言的數據
+                response = [
+                    {
+                        "pid": comment["pid"],
+                        "uid": comment["uid"],
+                        "comm_id": comment["comm_id"],
+                        "nid": comment["nid"],
+                        "title": comment["title"],
+                        "content": comment["content"],
+                    }
+                    for comment in comments
+                ]
+
+                return json({"comments": response}, status=200)
+    except Exception as e:
+        print(f"Error in get_all_comments: {str(e)}")
+        return json({"error": str(e)}, status=400)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000)

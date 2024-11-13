@@ -8,6 +8,18 @@
     <div v-else>
       <p>正在加載貼文信息...</p>
     </div>
+
+    <div v-if="comments">
+      <div v-for="comm in comments" :key="comm.pid">
+        <h2>{{ comm.title }}</h2>
+        <p>{{ comm.content }}</p>
+        <p>發言人: {{ comm.una }}</p>
+        <p>{{ comm.crea_date }}</p>
+       </div>
+    </div>
+    <div v-else>
+        <p>正在加載留言信息...</p>
+    </div>
 </template>
   
   <script>
@@ -20,17 +32,19 @@
       const postStore = useAuthStore();
       const route = useRoute();
   
-      // 當組件掛載時，根據路由參數查詢社群信息
+      // 當組件掛載時，根據路由參數查詢貼文信息
       onMounted(async () => {
-        const postId = route.params.id; // 獲取路由中的社群 ID
-        await postStore.getPostInfo(postId); //調用 Pinia store 的方法取得所有該社群的貼文
+        const postId = route.params.id; // 獲取路由中的貼文 ID
+        await postStore.getPostInfo(postId); //調用 Pinia store 的方法取得個別貼文內容
+        await postStore.getAllComments(postId);//調用 Pinia store 的方法取得所有貼文的留言
       });
   
       // 計算屬性用來訪問 store 中的社群數據
       const post = computed(() => postStore.postState.post);
-      
+      const comments=computed(()=>postStore.postState.comments)
       return {
-        post
+        post,
+        comments
       };
     },
   };

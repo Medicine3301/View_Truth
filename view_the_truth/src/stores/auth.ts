@@ -37,6 +37,14 @@ interface post {
     content: string
     crea_date: string
 }
+interface comment{
+    pid:string
+    comm_id:string
+    uid:string 
+    title:string
+    content:string
+    nid:string
+}
 interface CommunityState {
     community: Community | null
     communities: Community[] | null
@@ -44,6 +52,8 @@ interface CommunityState {
 interface Poststate {
     post: post | null
     posts: post[] | null
+    comment:comment | null
+    comments:comment[] |null
 }
 interface RegisterUserData {
     name: string
@@ -70,7 +80,9 @@ export const useAuthStore = defineStore('auth', {
         },
         postState: {
             post: null,
-            posts: null
+            posts: null,
+            comment:null,
+            comments:null
         }
     }),
     getters: {
@@ -275,6 +287,26 @@ export const useAuthStore = defineStore('auth', {
             } catch (error: any) {
                 notification.error({
                     message: '獲取所有貼文信息失敗',
+                    description: error.response?.data?.error || '請稍後再試',
+                    duration: 3
+                });
+            }
+        },
+        async getAllComments(pid: string) {
+            try {
+                const response = await axios.get(`http://localhost:8000/api/comment/${pid}`);
+                if (response.status === 200) {
+                    this.postState.comments = response.data.comments as comment[];
+                } else {
+                    notification.error({
+                        message: '沒有找到任何留言',
+                        description: '目前沒有可用的留言資料',
+                        duration: 3
+                    });
+                }
+            } catch (error: any) {
+                notification.error({
+                    message: '獲取所有留言信息失敗',
                     description: error.response?.data?.error || '請稍後再試',
                     duration: 3
                 });

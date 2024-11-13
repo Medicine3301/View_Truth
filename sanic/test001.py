@@ -20,7 +20,7 @@ SECRET_KEY = "therealeyecanseethetruth"
 DB_CONFIG = {
     "host": "127.0.0.1",
     "user": "root",
-    "password": "1258hjh3967",
+    "password": "123456",
     "db": "new_community",
     "charset": "utf8mb4",
 }
@@ -292,8 +292,9 @@ async def get_all_post(request, cid):
         return json({"error": str(e)}, status=400)
 
 
+'''
 @app.get("/api/post/<pid>")
-async def get_all_post(request, pid):
+async def get_post_info(request, pid):
     """獲取所有社群貼文信息的 API"""
     try:
         async with app.ctx.pool.acquire() as conn:
@@ -317,6 +318,7 @@ async def get_all_post(request, pid):
     except Exception as e:
         print(f"Error in get_post_info: {str(e)}")
         return json({"error": str(e)}, status=400)
+'''
 
 
 if __name__ == "__main__":

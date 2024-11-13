@@ -240,9 +240,29 @@ export const useAuthStore = defineStore('auth', {
                 });
             }
         },
+        async getPostInfo(pid: string) {
+            try {
+                const response = await axios.get(`http://localhost:8000/api/post/${pid}`);
+                if (response.status === 200) {
+                    this.postState.post = response.data.post;
+                } else {
+                    notification.error({
+                        message: '貼文不存在',
+                        description: '無法找到該貼文',
+                        duration: 3
+                    });
+                }
+            } catch (error: any) {
+                notification.error({
+                    message: '獲取貼文信息失敗',
+                    description: error.response?.data?.error || '請稍後再試',
+                    duration: 3
+                });
+            }
+        },
         async getAllPosts(cid: string) {
             try {
-                const response = await axios.get(`http://localhost:8000/api/post/${cid}`);
+                const response = await axios.get(`http://localhost:8000/api/posts/${cid}`);
                 if (response.status === 200) {
                     this.postState.posts = response.data.posts as post[];
                 } else {

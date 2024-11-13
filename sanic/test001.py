@@ -254,7 +254,7 @@ async def get_community_info(request, cid):
         return json({"error": str(e)}, status=400)
 
 
-@app.get("/api/post/<cid>")
+@app.get("/api/posts/<cid>")
 async def get_all_post(request, cid):
     """獲取所有社群貼文信息的 API"""
     try:
@@ -292,10 +292,10 @@ async def get_all_post(request, cid):
         return json({"error": str(e)}, status=400)
 
 
-'''
+
 @app.get("/api/post/<pid>")
 async def get_post_info(request, pid):
-    """獲取所有社群貼文信息的 API"""
+    """獲取社群貼文信息的 API"""
     try:
         async with app.ctx.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
@@ -303,7 +303,7 @@ async def get_post_info(request, pid):
                     "SELECT pid, cid, uid, una,title,content,comm_count,crea_date FROM post where pid=%s",
                     (pid,),
                 ),
-                post = await cur.fetchall()
+                post = await cur.fetchone()
 
                 if not post:
                     return json({"error": "找尋不到該貼文"}, status=404)
@@ -318,7 +318,7 @@ async def get_post_info(request, pid):
     except Exception as e:
         print(f"Error in get_post_info: {str(e)}")
         return json({"error": str(e)}, status=400)
-'''
+
 
 
 if __name__ == "__main__":

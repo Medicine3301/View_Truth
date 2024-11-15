@@ -326,7 +326,7 @@ async def get_all_comment(request, pid):
         async with app.ctx.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 await cur.execute(
-                    "SELECT pid, uid,comm_id,nid,title,content FROM comments where pid=%s",
+                    "SELECT pid,uid,una,comm_id,nid,title,content,crea_date FROM comments where pid=%s",
                     (pid,),
                 ),
                 comments = await cur.fetchall()
@@ -339,10 +339,14 @@ async def get_all_comment(request, pid):
                     {
                         "pid": comment["pid"],
                         "uid": comment["uid"],
+                        "una": comment["una"],
                         "comm_id": comment["comm_id"],
                         "nid": comment["nid"],
                         "title": comment["title"],
                         "content": comment["content"],
+                        "crea_date": (
+                            comment["crea_date"].isoformat() if comment["crea_date"] else None
+                        ),
                     }
                     for comment in comments
                 ]

@@ -41,8 +41,10 @@ interface comment{
     pid:string
     comm_id:string
     uid:string 
+    uan:string
     title:string
     content:string
+    crea_date:string
     nid:string
 }
 interface CommunityState {

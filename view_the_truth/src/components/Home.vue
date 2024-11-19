@@ -2,8 +2,8 @@
     <a-layout>
         <a-layout-sider :style="{ height: '100vh', position: 'fixed', left: 0 }" breakpoint="md" collapsed-width="0"
             @collapse="onCollapse" @breakpoint="onBreakpoint" v-model:collapsed="collapsed">
-            <div class="logo"><img src="/public/img/Doge.png" alt=""></div>
-            <a-menu v-model:selectedKeys="selectedKeys" theme="dark" mode="inline">
+
+            <a-menu v-model:selectedKeys="selectedKeys" theme="dark" mode="inline" style="margin-top: 20px;">
                 <a-menu-item key="home">
                     <HomeOutlined />
                     <span class="nav-text">首頁</span>
@@ -55,6 +55,7 @@
         <a-layout :style="{ marginLeft: layoutMargin }">
             <!-- 頂部Header -->
             <a-layout-header :style="{ background: '#fff', padding: 0 }">
+                <div class="logo header-logo"><img src="/public/img/Doge.png" alt="網站Logo"></div>
                 <!-- 搜尋框 -->
                 <a-input-search v-model:value="searchValue" style="width: 150px; margin-top: 15px; margin-left: 20px;"
                     placeholder="搜尋關鍵字" enter-button @search="onSearch" />
@@ -250,19 +251,19 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.logo {
-    height: 64px;
-    background: rgba(255, 255, 255, 0.2);
-    margin: 16px;
-    display: flex;
+.header-logo {
+    height: 48px;
+    margin-left: 16px;
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
+    gap: 8px;
 }
 
 .logo img {
     height: 100%;
     max-height: 48px;
     width: auto;
+    margin-top: 10px;
 }
 
 .site-layout-sub-header-background {

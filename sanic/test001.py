@@ -292,7 +292,6 @@ async def get_all_post(request, cid):
         return json({"error": str(e)}, status=400)
 
 
-
 @app.get("/api/post/<pid>")
 async def get_post_info(request, pid):
     """獲取社群貼文信息的 API"""
@@ -318,6 +317,7 @@ async def get_post_info(request, pid):
     except Exception as e:
         print(f"Error in get_post_info: {str(e)}")
         return json({"error": str(e)}, status=400)
+
 
 @app.get("/api/comment/<pid>")
 async def get_all_comment(request, pid):
@@ -345,7 +345,9 @@ async def get_all_comment(request, pid):
                         "title": comment["title"],
                         "content": comment["content"],
                         "crea_date": (
-                            comment["crea_date"].isoformat() if comment["crea_date"] else None
+                            comment["crea_date"].isoformat()
+                            if comment["crea_date"]
+                            else None
                         ),
                     }
                     for comment in comments
@@ -355,6 +357,7 @@ async def get_all_comment(request, pid):
     except Exception as e:
         print(f"Error in get_all_comments: {str(e)}")
         return json({"error": str(e)}, status=400)
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000)

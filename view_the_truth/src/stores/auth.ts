@@ -41,7 +41,7 @@ interface comment{
     pid:string
     comm_id:string
     uid:string 
-    uan:string
+    una:string
     title:string
     content:string
     crea_date:string

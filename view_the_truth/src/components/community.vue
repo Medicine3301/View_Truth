@@ -1,69 +1,223 @@
 <template>
-  <div v-if="community">
-    <h2>{{ community.cna }}</h2>
-    <p>{{ community.descr }}</p>
-    <p>最後更新: {{ community.last_update }}</p>
-  </div>
-  <div v-else>
-    <p>正在加載社群信息...</p>
-  </div>
-  
-  <div v-if="posts">
-    <div v-for="post in posts" :key="post.pid">
-      <h2 @click="goToPost(post.pid)">{{ post.title }}</h2>
-      <p>{{ post.content }}</p>
-      <p>發言人: {{ post.una }}</p>
-      <p>{{ post.crea_date }}</p>
-    </div>
-  </div>
-  <div v-else>
-    <p>正在加載社群貼文訊息...</p>
-  </div>
+  <a-layout>
+    <Sidebar v-model:collapsed="collapsed" :onCollapse="onCollapse" />
+    <a-layout :style="{ marginLeft: layoutMargin }">
+      <Header />
+      <a-layout-content :style="{ margin: '24px 16px 0', minHeight: '280px' }">
+        <div class="content-container">
+          <a-spin :spinning="loading">
+            <!-- 社群資訊區塊 -->
+            <template v-if="community">
+              <div class="community-info">
+                <h2 class="community-title">{{ community.cna }}</h2>
+                <p class="community-description">{{ community.descr }}</p>
+                <p class="update-time">最後更新: {{ formatDate(community.last_update) }}</p>
+              </div>
+            </template>
+
+            <!-- 貼文列表區塊 -->
+            <div class="post-list">
+              <template v-if="posts && posts.length > 0">
+                <div v-for="post in posts" 
+                     :key="post.pid" 
+                     class="post-item"
+                     @click="goToPost(post.pid)">
+                  <div class="post-header">
+                    <h3 class="post-title">{{ post.title }}</h3>
+                    <span class="post-date">{{ formatDate(post.crea_date) }}</span>
+                  </div>
+                  <p class="post-content">{{ post.content }}</p>
+                  <div class="post-footer">
+                    <a-avatar size="small" class="user-avatar">{{ post.una.charAt(0) }}</a-avatar>
+                    <span class="user-name">{{ post.una }}</span>
+                  </div>
+                </div>
+              </template>
+              <a-empty v-else description="目前沒有貼文" />
+            </div>
+          </a-spin>
+        </div>
+      </a-layout-content>
+      <a-layout-footer style="text-align: center">
+        識真網 ©2024 Created by Ant UED
+      </a-layout-footer>
+    </a-layout>
+  </a-layout>
 </template>
 
-<script>
-import { useAuthStore } from '../stores/auth';
-import { onMounted, computed } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+<script setup lang="ts">
+import { ref, computed, watch, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
+import Sidebar from '../layout/sidebar.vue'
+import Header from '../layout/header.vue'
+import { message } from 'ant-design-vue'
 
-export default {
-  setup() {
-    const communityStore = useAuthStore();
-    const route = useRoute();
-    const router = useRouter();
+// 基本狀態
+const collapsed = ref(false)
+const loading = ref(true)
+const route = useRoute()
+const router = useRouter()
+const authStore = useAuthStore()
 
-    // 當組件掛載時，根據路由參數查詢社群信息
-    onMounted(async () => {
-      const communityId = route.params.id; // 獲取路由中的社群 ID
-      await communityStore.getCommunityInfo(communityId); // 調用 Pinia store 的方法取得社群資訊
-      await communityStore.getAllPosts(communityId); // 調用 Pinia store 的方法取得該社群的所有貼文
-    });
+// 計算屬性
+const layoutMargin = computed(() => collapsed.value ? '0px' : '200px')
+const community = computed(() => authStore.communityState.community)
+const posts = computed(() => authStore.postState.posts)
 
-    // 計算屬性來訪問 store 中的社群數據
-    const community = computed(() => communityStore.communityState.community);
-    const posts = computed(() => communityStore.postState.posts);
+// 日期格式化
+const formatDate = (date: string): string => {
+  return new Date(date).toLocaleString('zh-TW', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
 
-    // 跳轉到貼文頁面的方法
-    const goToPost = (postId) => {
-      router.push({ name: 'post', params: { id: postId } });
-    };
+// 資料載入函數
+const loadCommunityData = async (communityId: string) => {
+  loading.value = true
+  try {
+    await Promise.all([
+      authStore.getCommunityInfo(communityId),
+      authStore.getAllPosts(communityId)
+    ])
+  } catch (error) {
+    message.error('載入社群資料失敗')
+    console.error('Error loading community data:', error)
+  } finally {
+    loading.value = false
+  }
+}
 
-    return {
-      community,
-      posts,
-      goToPost,
-    };
+// 監聽路由變化
+watch(
+  () => route.params.id,
+  async (newId) => {
+    if (newId && typeof newId === 'string') {
+      await loadCommunityData(newId)
+    }
   },
-};
+  { immediate: true }
+)
+
+// 事件處理
+const onCollapse = (isCollapsed: boolean, type: string) => {
+  collapsed.value = isCollapsed
+}
+
+const goToPost = async (postId: string) => {
+  try {
+    await router.push({
+      name: 'post',
+      params: { id: postId }
+    })
+  } catch (error) {
+    message.error('無法開啟貼文')
+    console.error('Error navigating to post:', error)
+  }
+}
+
+// 元件掛載
+onMounted(async () => {
+  const communityId = route.params.id
+  if (communityId && typeof communityId === 'string') {
+    await loadCommunityData(communityId)
+  }
+})
 </script>
 
 <style scoped>
-h2 {
+.content-container {
+  padding: 24px;
+  background: #fff;
+  min-height: 360px;
+}
+
+.community-info {
+  margin-bottom: 24px;
+  text-align: left;
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 4px;
+}
+
+.community-title {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 16px;
   color: #1890ff;
 }
 
-p {
+.community-description {
   font-size: 16px;
+  color: #666;
+  margin-bottom: 8px;
   line-height: 1.5;
+}
+
+.update-time {
+  font-size: 14px;
+  color: #999;
+}
+
+.post-list {
+  margin-top: 20px;
+}
+
+.post-item {
+  margin-bottom: 16px;
+  padding: 16px;
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.post-item:hover {
+  background-color: #f5f5f5;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
+}
+
+.post-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.post-title {
+  font-size: 18px;
+  color: #1890ff;
+  margin: 0;
+}
+
+.post-date {
+  font-size: 14px;
+  color: #999;
+}
+
+.post-content {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.post-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-avatar {
+  margin-right: 8px;
+}
+
+.user-name {
+  font-size: 14px;
+  color: #999;
 }
 </style>

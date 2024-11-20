@@ -3,7 +3,7 @@
         v-model:collapsed="localCollapsed" @collapse="handleCollapse" @breakpoint="onBreakpoint">
 
         <a-menu v-model:selectedKeys="selectedKeys" theme="dark" mode="inline" style="margin-top: 20px;">
-            <a-menu-item key="home">
+            <a-menu-item @click="goTotop">
                 <HomeOutlined />
                 <span class="nav-text">首頁</span>
             </a-menu-item>
@@ -53,71 +53,95 @@
     </a-layout-sider>
 </template>
 <script lang="ts" setup>
-import { computed, ref, onMounted ,watch} from 'vue';
+import { computed, ref, onMounted, watch } from 'vue';
 import { UserOutlined, VideoCameraOutlined, FireOutlined, NotificationOutlined } from '@ant-design/icons-vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import { defineProps } from 'vue';
-//同步
-// 正確定義 props
+
 const props = defineProps<{
   collapsed: boolean;
   onCollapse: (collapsed: boolean, type: string) => void;
 }>();
 
-// 定義 emit
 const emit = defineEmits<{
   (e: 'update:collapsed', value: boolean): void;
 }>();
 
-// 本地狀態
+const router = useRouter();
+const route = useRoute();
+const authStore = useAuthStore();
+const isAdmin = computed(() => authStore.isAdmin);
+
 const localCollapsed = ref(props.collapsed);
+const broken = ref(false);
+
+// 使用計算屬性來同步當前路由和選中的選單項
+const selectedKeys = computed(() => {
+  if (route.name === 'community') {
+    return [route.params.id as string];
+  }
+  return [route.name as string];
+});
 
 // 監聽 props 變化
 watch(() => props.collapsed, (newVal) => {
   localCollapsed.value = newVal;
 });
 
-// 處理折疊狀態變化
 const handleCollapse = (isCollapsed: boolean, type: string) => {
   localCollapsed.value = isCollapsed;
   emit('update:collapsed', isCollapsed);
   props.onCollapse(isCollapsed, type);
 };
 
-// 路由實例
-const router = useRouter();
-
-// 認證store
-const authStore = useAuthStore();
-// 判斷是否為管理員
-const isAdmin = computed(() => authStore.isAdmin);
-// 側邊欄狀態
-const collapsed = ref(false);
-const broken = ref(false);
-
-
-
-
 const onBreakpoint = (isBroken: boolean) => {
-    broken.value = isBroken;
-    if (isBroken) {
-        collapsed.value = true; // 當進入斷點時自動折疊
-    }
+  broken.value = isBroken;
+  if (isBroken) {
+    localCollapsed.value = true;
+  }
 };
 
-
-// 選中的菜單項
-const selectedKeys = ref<string[]>(['4']);
-
-
-// 跳轉到社群頁面
-const goToCommunity = (communityId: string) => {
-    router.push({ name: 'community', params: { id: communityId } });
+// 優化社群切換函數
+const goToCommunity = async (communityId: string) => {
+  try {
+    // 先載入社群資料
+    await authStore.getCommunityInfo(communityId);
+    // 確保社群資料載入後再切換路由
+    await router.push({
+      name: 'community',
+      params: { id: communityId },
+      replace: true // 使用 replace 避免在歷史記錄中堆疊相同路由
+    });
+  } catch (error) {
+    // 錯誤處理已在 store 中實作
+    console.error('Failed to navigate to community:', error);
+  }
 };
+
+// 在組件掛載時載入社群列表
 onMounted(async () => {
-    await authStore.getAllCommunities();
+  await authStore.getAllCommunities();
+  
+  // 如果當前在社群頁面，確保相關數據已載入
+  if (route.name === 'community' && route.params.id) {
+    await authStore.getCommunityInfo(route.params.id as string);
+  }
 });
+
+// 監聽路由變化，確保數據同步
+watch(
+  () => route.params.id,
+  async (newId) => {
+    if (newId && route.name === 'community') {
+      await authStore.getCommunityInfo(newId as string);
+    }
+  }
+);
+//回到首頁
+const goTotop = () => {
+    router.push("/");
+};
 </script>
 
 <style scoped>

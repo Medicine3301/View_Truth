@@ -1,7 +1,7 @@
 <template>
     <!-- 頂部Header -->
     <a-layout-header :style="{ background: '#fff', padding: 0 }">
-        <div class="logo header-logo"><img src="/public/img/Doge.png" alt="網站Logo"></div>
+        <div class="logo header-logo"><img src="/public/img/Doge.png" alt="網站Logo" @click="goTotop"></div>
         <!-- 搜尋框 -->
         <a-input-search v-model:value="searchValue" style="width: 150px; margin-top: 15px; margin-left: 20px;"
             placeholder="搜尋關鍵字" enter-button @search="onSearch" />
@@ -145,6 +145,10 @@ const goToUserProfile = () => {
         console.error('未登入或無法取得用戶ID');
     }
 };
+//回到首頁
+const goTotop = () => {
+    router.push("/");
+};
 </script>
 <style scoped>
 .header-logo {
@@ -153,6 +157,7 @@ const goToUserProfile = () => {
     display: inline-flex;
     align-items: center;
     gap: 8px;
+    cursor: pointer; /* 指定指標為手形 */
 }
 
 .logo img {

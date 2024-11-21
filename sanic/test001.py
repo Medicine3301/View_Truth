@@ -199,7 +199,7 @@ async def get_all_communities(request):
     try:
         async with app.ctx.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
-                await cur.execute("SELECT cid, cna, descr, last_update FROM community")
+                await cur.execute("SELECT cid, cna, descr, post_count,last_update FROM community")
                 communities = await cur.fetchall()
 
                 if not communities:
@@ -211,6 +211,7 @@ async def get_all_communities(request):
                         "cid": community["cid"],
                         "cna": community["cna"],
                         "descr": community["descr"],
+                        "post_count": community["post_count"],
                         "last_update": (
                             community["last_update"].isoformat()
                             if community["last_update"]
@@ -233,7 +234,7 @@ async def get_community_info(request, cid):
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 print(f"查詢社群ID: {cid}")
                 await cur.execute(
-                    "SELECT cid, cna, descr, last_update FROM community WHERE cid = %s",
+                    "SELECT cid, cna, descr, post_count,last_update FROM community WHERE cid = %s",
                     (cid,),
                 )
                 community = await cur.fetchone()

@@ -26,6 +26,7 @@ interface Community {
     cid: string
     cna: string
     descr: string
+    post_count:string
     last_update: string
 }
 interface post {

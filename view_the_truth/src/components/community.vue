@@ -10,23 +10,66 @@
             <template v-if="community">
               <div class="community-info">
                 <h2 class="community-title">{{ community.cna }}</h2>
-                <p class="community-description">{{ community.descr }}</p>
-                <p class="update-time">最後更新: {{ formatDate(community.last_update) }}</p>
+                <div class="post-header">
+                  <p class="community-description">{{ community.descr }}</p>
+                  <a-button type="primary" size="large" @click="showPostModal">發表文章</a-button>
+                  <!-- 發表文章彈窗 -->
+                  <a-modal v-model:open="loginModalVisible" title="登入" :centered="true" :footer="null" :width="400"
+                    @cancel="handleLoginCancel">
+                    <a-form :model="loginForm" @finish="handleLoginSubmit" :style="{ textAlign: 'center' }">
+                      <!-- 用戶名輸入 -->
+                      <a-form-item name="username" :rules="[{ required: true, message: '請輸入使用者名稱！' }]">
+                        <a-input v-model:value="loginForm.username" placeholder="使用者名稱">
+                          <template #prefix>
+                            <UserOutlined />
+                          </template>
+                        </a-input>
+                      </a-form-item>
+
+                      <!-- 密碼輸入 -->
+                      <a-form-item name="password" :rules="[{ required: true, message: '請輸入密碼！' }]">
+                        <a-input-password v-model:value="loginForm.password" placeholder="密碼">
+                          <template #prefix>
+                            <LockOutlined />
+                          </template>
+                        </a-input-password>
+                      </a-form-item>
+
+                      <!-- 提交按鈕 -->
+                      <div style="display: flex; justify-content: center; gap: 16px;">
+                        <a-button type="primary" html-type="submit" :loading="loginLoading">
+                          發表
+                        </a-button>
+                        <a-button @click="handleLoginCancel">
+                          取消
+                        </a-button>
+                      </div>
+                    </a-form>
+                  </a-modal>
+                </div>
+                <div class="post-header">
+                  <p class="update-time">最後更新: {{ formatDate(community.last_update) }}</p>
+                  <p style="font-size: 14px;
+                    color: #666; margin-right: 20px;">文章總數:{{ community.post_count }}</p>
+                </div>
+
+
               </div>
             </template>
 
             <!-- 貼文列表區塊 -->
             <div class="post-list">
               <template v-if="posts && posts.length > 0">
-                <div v-for="post in posts" 
-                     :key="post.pid" 
-                     class="post-item"
-                     @click="goToPost(post.pid)">
+                <div v-for="post in posts" :key="post.pid" class="post-item" @click="goToPost(post.pid)">
                   <div class="post-header">
                     <h3 class="post-title">{{ post.title }}</h3>
                     <span class="post-date">{{ formatDate(post.crea_date) }}</span>
                   </div>
-                  <p class="post-content">{{ post.content }}</p>
+                  <div>
+                    <p class="post-content">{{ post.content.length > maxLength ? post.content.slice(0, maxLength) + "..."
+                      : post.content }}</p>
+                  </div>
+
                   <div class="post-footer">
                     <a-avatar size="small" class="user-avatar">{{ post.una.charAt(0) }}</a-avatar>
                     <span class="user-name">{{ post.una }}</span>
@@ -46,7 +89,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, reactive} from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import Sidebar from '../layout/sidebar.vue'
@@ -119,7 +162,16 @@ const goToPost = async (postId: string) => {
     console.error('Error navigating to post:', error)
   }
 }
+//處理最大字數
+interface Post {
+  content: string;
+}
 
+const props = defineProps<{
+  post: Post;
+}>();
+
+const maxLength = 50; // 最大字數限制
 // 元件掛載
 onMounted(async () => {
   const communityId = route.params.id
@@ -127,6 +179,48 @@ onMounted(async () => {
     await loadCommunityData(communityId)
   }
 })
+// 登入表單相關
+const loginModalVisible = ref<boolean>(false);
+const loginLoading = ref<boolean>(false);
+const loginForm = reactive({
+    username: '',
+    password: '',
+});
+
+// 顯示登入視窗
+const showPostModal = () => {
+    loginModalVisible.value = true;
+};
+
+// 處理登入取消
+const handleLoginCancel = () => {
+    loginModalVisible.value = false;
+    // 重置表單
+    loginForm.username = '';
+    loginForm.password = '';
+};
+
+// 處理登入提交
+const handleLoginSubmit = async () => {
+    try {
+        loginLoading.value = true;
+        const success = await authStore.login(loginForm.username, loginForm.password);
+
+        if (success) {
+            loginModalVisible.value = false;
+            // 重置表單
+            handleLoginCancel();
+        }
+    } finally {
+        loginLoading.value = false;
+    }
+};
+
+// 處理登出
+const handleLogout = () => {
+    authStore.logout();
+    router.push('/');
+};
 </script>
 
 <style scoped>

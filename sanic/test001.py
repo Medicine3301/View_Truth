@@ -199,7 +199,9 @@ async def get_all_communities(request):
     try:
         async with app.ctx.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
-                await cur.execute("SELECT cid, cna, descr, post_count,last_update FROM community")
+                await cur.execute(
+                    "SELECT cid, cna, descr, post_count,last_update FROM community"
+                )
                 communities = await cur.fetchall()
 
                 if not communities:

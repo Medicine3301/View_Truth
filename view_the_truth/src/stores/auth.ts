@@ -10,6 +10,8 @@ interface UserState {
         una: string
         email: string
         role: string
+        birthday:string
+        usex:string
         avatar?: string
     } | null
     isAuthenticated: boolean
@@ -18,6 +20,8 @@ interface UserState {
         una: string
         email: string
         role: string
+        birthday:string
+        usex:string
         avatar?: string
     } | null
 }

@@ -182,11 +182,17 @@ async def get_user_info(request, uid):
         async with app.ctx.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 await cur.execute(
-                    "SELECT uid, una, email, role FROM users WHERE uid = %s", (uid,)
+                    "SELECT uid, una, email, role,birthday,usex FROM users WHERE uid = %s", (uid,)
                 )
                 user = await cur.fetchone()
                 if not user:
                     return json({"error": "用戶不存在"}, status=404)
+                # 處理 datetime
+                user = dict(user)
+                user["birthday"] = (
+                    user["birthday"].isoformat()
+                    if user["birthday"]
+                    else None)
 
                 return json({"user": user}, status=200)
     except Exception as e:

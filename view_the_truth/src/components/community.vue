@@ -31,12 +31,16 @@
                   </div>
                   <div>
                     <p class="post-content">{{ post.content.length > maxLength ? post.content.slice(0, maxLength) +
-                      "..."
-                      : post.content }}</p>
+                      "..." : post.content }}</p>
                   </div>
                   <div class="post-footer">
                     <a-avatar size="small" class="user-avatar">{{ post.una.charAt(0) }}</a-avatar>
                     <span class="user-name">{{ post.una }}</span>
+                    <!-- 添加留言圖標和留言數 -->
+                    <div class="comment-icon">
+                      <MessageOutlined />
+                      <span class="comment-count">{{ post.comm_count }}</span>
+                    </div>
                   </div>
                 </div>
               </template>
@@ -86,6 +90,7 @@ import { useAuthStore } from '../stores/auth'
 import Sidebar from '../layout/sidebar.vue'
 import Header from '../layout/header.vue'
 import { message } from 'ant-design-vue'
+import { MessageOutlined } from '@ant-design/icons-vue'
 import axios from 'axios'
 
 // 基本狀態
@@ -310,5 +315,18 @@ onMounted(async () => {
 .user-name {
   font-size: 14px;
   color: #999;
+}
+
+.comment-icon {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  /* 留言數在最右側 */
+  gap: 4px;
+}
+
+.comment-count {
+  font-size: 14px;
+  color: #666;
 }
 </style>

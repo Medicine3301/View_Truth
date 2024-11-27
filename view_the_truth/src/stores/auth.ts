@@ -40,6 +40,7 @@ interface post {
     una: string
     title: string
     content: string
+    comm_count:string
     crea_date: string
 }
 interface comment{

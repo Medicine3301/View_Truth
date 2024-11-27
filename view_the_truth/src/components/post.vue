@@ -15,6 +15,8 @@
                     <a-avatar size="small">{{ post.una.charAt(0) }}</a-avatar>
                     <span class="author-name">{{ post.una }}</span>
                     <span class="post-time">{{ formatDate(post.crea_date) }}</span>
+                    <!--評分模組-->
+                    <a-rate v-model:value="value" />
                   </div>
                 </div>
               </template>
@@ -79,7 +81,7 @@ import Sidebar from '../layout/sidebar.vue';
 import Header from '../layout/header.vue';
 import axios from 'axios';
 import { message } from 'ant-design-vue';
-
+const value = ref<number>(2);
 // 側邊欄狀態管理
 const collapsed = ref<boolean>(false);
 const broken = ref<boolean>(false);

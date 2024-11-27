@@ -1,8 +1,10 @@
--- MySQL dump 10.13  Distrib 8.0.37, for Win64 (x86_64)
+CREATE DATABASE  IF NOT EXISTS `new_community` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
+USE `new_community`;
+-- MySQL dump 10.13  Distrib 8.0.40, for Win64 (x86_64)
 --
 -- Host: localhost    Database: new_community
 -- ------------------------------------------------------
--- Server version	8.0.37
+-- Server version	8.0.40
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -16,33 +18,30 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
--- Table structure for table `users`
+-- Table structure for table `news`
 --
 
-DROP TABLE IF EXISTS `users`;
+DROP TABLE IF EXISTS `news`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `users` (
-  `uid` varchar(200) NOT NULL,
-  `una` varchar(20) DEFAULT NULL,
-  `usex` varchar(20) DEFAULT NULL,
-  `email` varchar(30) DEFAULT NULL,
-  `passwd` varchar(100) DEFAULT NULL,
-  `birthday` date DEFAULT NULL,
-  `role` enum('user','admin') DEFAULT 'user',
-  PRIMARY KEY (`uid`),
-  UNIQUE KEY `users_una_unique` (`una`)
+CREATE TABLE `news` (
+  `newstitle` varchar(20) DEFAULT NULL,
+  `news_id` varchar(50) NOT NULL,
+  `journ` varchar(30) DEFAULT NULL,
+  `crea_date` datetime DEFAULT NULL,
+  `newsclass` varchar(10) DEFAULT NULL,
+  `count` int DEFAULT NULL,
+  PRIMARY KEY (`news_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `users`
+-- Dumping data for table `news`
 --
 
-LOCK TABLES `users` WRITE;
-/*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES ('9dcc32d5-4726-4273-8937-3aa3709097cd','123','1','aaaaa@bbb.mm','$2b$12$R4RzD.rc3JRxokAnRRshSeymNO86qHV.utdXSUQ5j4utpnHBozaw.','2007-10-10','user'),('f8b79c16-f589-41d4-84b3-8e73f6ccb307','acrhjh','1','aaddd@bb.ccC','$2b$12$9QBrsjqzjkMtKTLIpJi.x.L.HOe960Eh6Qd5p6A332SS3b0gZ3mia','2014-10-16','admin');
-/*!40000 ALTER TABLE `users` ENABLE KEYS */;
+LOCK TABLES `news` WRITE;
+/*!40000 ALTER TABLE `news` DISABLE KEYS */;
+/*!40000 ALTER TABLE `news` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -54,4 +53,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-11-20 16:31:15
+-- Dump completed on 2024-11-27 14:54:59

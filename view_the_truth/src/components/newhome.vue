@@ -6,6 +6,22 @@
             <a-layout-content :style="{ background: '#ececec', margin: '24px 16px 0' }">
                 <div :style="{ padding: '24px', background: '#fff', minHeight: '360px' }">
                     <div class="news-main-content">
+                        <!-- 新聞主標題 -->
+                        <div class="news-header" :style="{ marginBottom: '24px', textAlign: 'center' }">
+                            <h1></h1>
+                        </div>
+
+                        <!-- 新聞分類選單 -->
+                        <div class="news-category-menu" :style="{ marginBottom: '16px', textAlign: 'center' }">
+                            <a-space>
+                                <a-button type="link" @click="filterCategory('international')">國際</a-button>
+                                <a-button type="link" @click="filterCategory('technology')">科技</a-button>
+                                <a-button type="link" @click="filterCategory('entertainment')">娛樂</a-button>
+                                <a-button type="link" @click="filterCategory('sports')">體育</a-button>
+                                <a-button type="link" @click="filterCategory('health')">健康</a-button>
+                            </a-space>
+                        </div>
+
                         <!-- 熱門新聞卡片 -->
                         <div class="hot-news-card" :style="{ display: 'flex', gap: '16px', marginBottom: '24px' }">
                             <div class="hot-news-item" :style="{ flex: 1, padding: '16px', background: '#fafafa', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }">
@@ -21,23 +37,6 @@
                                 </div>
                             </div>
                         </div>
-
-                        <!-- 新聞主標題 -->
-                        <div class="news-header" :style="{ marginBottom: '24px', textAlign: 'center' }">
-                            <h1>今日要聞</h1>
-                        </div>
-
-                        <!-- 新聞分類選單 -->
-                        <div class="news-category-menu" :style="{ marginBottom: '16px', textAlign: 'center' }">
-                            <a-space>
-                                <a-button type="link" @click="filterCategory('international')">國際</a-button>
-                                <a-button type="link" @click="filterCategory('technology')">科技</a-button>
-                                <a-button type="link" @click="filterCategory('entertainment')">娛樂</a-button>
-                                <a-button type="link" @click="filterCategory('sports')">體育</a-button>
-                                <a-button type="link" @click="filterCategory('health')">健康</a-button>
-                            </a-space>
-                        </div>
-
                         <!-- 新聞文章列表 -->
                         <div class="news-list" :style="{ display: 'flex', flexDirection: 'column', gap: '16px' }">
                             <div class="news-item" v-for="n in 5" :key="n" :style="{ padding: '16px', border: '1px solid #d9d9d9', borderRadius: '8px', background: '#fff', transition: 'transform 0.3s', cursor: 'pointer' }" @mouseover="hoverNewsItem(n)" @mouseleave="leaveNewsItem(n)" @click="readMore(n)">

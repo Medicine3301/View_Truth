@@ -48,6 +48,9 @@
                 </template>
                 加為好友
               </a-button>
+              <a-button style="flex: 1" type="link" href="view_the_truth\src\components\Home.vue" >
+                回主頁
+              </a-button>
             </a-button-group>
           </template>
         </a-card>

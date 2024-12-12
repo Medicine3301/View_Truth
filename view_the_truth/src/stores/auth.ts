@@ -48,7 +48,6 @@ interface comment{
     comm_id:string
     uid:string 
     una:string
-    title:string
     content:string
     crea_date:string
     nid:string

@@ -20,7 +20,7 @@ SECRET_KEY = "therealeyecanseethetruth"
 DB_CONFIG = {
     "host": "127.0.0.1",
     "user": "root",
-    "password": "takming",
+    "password": "123456",
     "db": "new_community",
     "charset": "utf8mb4",
 }
@@ -38,6 +38,19 @@ async def get_user_by_username(pool, username):
         async with conn.cursor(aiomysql.DictCursor) as cur:
             await cur.execute("SELECT * FROM users WHERE una = %s", (username,))
             return await cur.fetchone()
+    
+#輔助函數:查詢貼文最新的紀錄(貼文用)
+async def get_latest_comm_id(pool):
+    """
+    查詢最新的 news_id。
+    """
+    query = "SELECT comm_id FROM comments ORDER BY comm_id DESC LIMIT 1"
+
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(query)
+            result = await cur.fetchone()
+            return result[0] if result else "PR0000"  # 初始值
 
 
 # 註冊路由
@@ -93,7 +106,47 @@ async def register(request):
 
     except Exception as e:
         return json({"error": str(e)}, status=400)
+# 新增留言路由
+@app.post("/api/post/comment/create")
+async def PostCommentAdd(request):
+    """用戶新增留言API
+    接收：
+    - uid:用戶編號
+    - una:用戶名
+    - comm_id:貼文表編號
+    - content :內容
+    - pid :貼文編號
+    """
+    try:
+        data = request.json
+        # 獲取最新 news_id 並產生新 ID
+        latest_news_id = await get_latest_comm_id(app.ctx.pool)
+        next_id_number = int(latest_news_id[1:]) + 1
+        next_id = f"N{next_id_number:04d}"  # 格式化為 PR0001, PR0002, etc.
+        # 插入用戶數據
+        async with app.ctx.pool.acquire() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(
+                    """
+                    INSERT INTO comment (pid,title,comm_id,uid,una,content)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """,
+                    (
+                        data["pid"],
+                        data["title"],
+                        next_id,
+                        data["uid"],
+                        data["una"],
+                        data["content"]
+                    ),
+                )
 
+        return json({"message": "留言成功"}, status=201)
+
+    except Exception as e:
+        print(str(e))
+        return json({"error": str(e)}, status=400)
+        
 
 # 登入路由
 @app.post("/api/login")

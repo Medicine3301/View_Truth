@@ -30,6 +30,10 @@
               <!-- 發表評論 -->
               <div class="comment-form">
                 <a-form :model="commentForm" @finish="handleCommentSubmit">
+                  <a-form-item name="title" :rules="[{ required: true, message: '請輸入標題' }]">
+                    <a-textarea v-model:value="commentForm.title" :rows="1" placeholder="寫下你的標題..."
+                      :disabled="!postStore.userState.isAuthenticated" />
+                  </a-form-item>
                   <a-form-item name="content" :rules="[{ required: true, message: '請輸入評論內容' }]">
                     <a-textarea v-model:value="commentForm.content" :rows="4" placeholder="寫下你的評論..."
                       :disabled="!postStore.userState.isAuthenticated" />
@@ -76,11 +80,11 @@
 <script lang="ts" setup>
 import { useAuthStore } from '../stores/auth';
 import { onMounted, computed, ref, reactive } from 'vue';
-import { useRoute } from 'vue-router';
+import { ErrorTypes, useRoute } from 'vue-router';
 import Sidebar from '../layout/sidebar.vue';
 import Header from '../layout/header.vue';
 import axios from 'axios';
-import { message } from 'ant-design-vue';
+import { message, notification } from 'ant-design-vue';
 const value = ref<number>(2);
 // 側邊欄狀態管理
 const collapsed = ref<boolean>(false);
@@ -90,7 +94,8 @@ const submitting = ref<boolean>(false);
 
 // 評論表單
 const commentForm = reactive({
-  content: ''
+  content: '',
+  title:''
 });
 
 // 動態計算佈局邊距
@@ -143,8 +148,11 @@ const handleCommentSubmit = async () => {
 
   submitting.value = true;
   try {
-    const response = await axios.post('http://localhost:8000/api/comment/create', {
+    const response = await axios.post('http://localhost:8000/api/post/comment/create', {
+      uid:postStore.userState.otherUser?.uid,
+      una:postStore.userState.otherUser?.una,
       pid: route.params.id,
+      title:commentForm.title,
       content: commentForm.content
     });
 

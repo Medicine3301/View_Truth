@@ -149,8 +149,8 @@ const handleCommentSubmit = async () => {
   submitting.value = true;
   try {
     const response = await axios.post('http://localhost:8000/api/post/comment/create', {
-      uid:postStore.userState.otherUser?.uid,
-      una:postStore.userState.otherUser?.una,
+      uid:postStore.userState.user?.uid,
+      una:postStore.userState.user?.una,
       pid: route.params.id,
       title:commentForm.title,
       content: commentForm.content

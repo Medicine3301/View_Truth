@@ -20,7 +20,7 @@ SECRET_KEY = "therealeyecanseethetruth"
 DB_CONFIG = {
     "host": "127.0.0.1",
     "user": "root",
-    "password": "takming",
+    "password": "123456",
     "db": "new_community",
     "charset": "utf8mb4",
 }

@@ -1,5 +1,6 @@
 <template>
   <div class="user-profile-container">
+    <a-page-header style="border: 1px solid rgb(235, 237, 240)" title="回首頁" @back="goTotop" />
     <a-row :gutter="[24, 24]">
       <!-- Left Column - User Card -->
       <a-col :xs="24" :sm="24" :md="8" :lg="6">
@@ -47,9 +48,6 @@
                   <UserAddOutlined />
                 </template>
                 加為好友
-              </a-button>
-              <a-button style="flex: 1" type="link" href="view_the_truth\src\components\Home.vue" >
-                回主頁
               </a-button>
             </a-button-group>
           </template>
@@ -187,19 +185,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted} from 'vue'
 import { useAuthStore } from '../stores/auth'
-import { useRoute } from 'vue-router'
-import {
-  UserAddOutlined,
-  MessageOutlined,
-  LikeOutlined,
-  ShareAltOutlined
-} from '@ant-design/icons-vue'
-
+import { useRoute ,useRouter} from 'vue-router'
 // 獲取 store 和 route 實例
 const authStore = useAuthStore()
 const route = useRoute()
+const router =useRouter()
 
 // 定義活動列表數據
 const userActivities = ref([
@@ -314,6 +306,9 @@ const getRoleColor = (role?: string) => {
   }
   return roleColors[role ?? 'user']
 }
+const goTotop = () => {
+    router.push("/");
+};
 </script>
 
 <style scoped>

@@ -12,7 +12,7 @@
                 <div class="post-header">
                   <h2 class="post-title">{{ post.title }}</h2>
                   <div class="post-meta">
-                    <a-avatar size="small">{{ post.una.charAt(0) }}</a-avatar>
+                    <a-avatar size="small" @click="goToUserProfile(post.uid)">{{ post.una.charAt(0) }}</a-avatar>
                     <span class="author-name">{{ post.una }}</span>
                     <span class="post-time">{{ formatDate(post.crea_date) }}</span>
                     <!--評分模組-->
@@ -53,7 +53,9 @@
                   <div v-for="comment in comments" :key="comment.comm_id" class="comment-item">
                     <div class="comment-header">
                       <div class="comment-user">
-                        <a-avatar size="small">{{ comment.una.charAt(0) }}</a-avatar>
+                        <a-avatar size="small" @click="goToUserProfile(comment.uid)">
+                          {{ comment.una.charAt(0) }}
+                        </a-avatar>
                         <span class="comment-author">{{ comment.una }}</span>
                       </div>
                       <span class="comment-time">{{ formatDate(comment.crea_date) }}</span>
@@ -80,7 +82,7 @@
 <script lang="ts" setup>
 import { useAuthStore } from '../stores/auth';
 import { onMounted, computed, ref, reactive } from 'vue';
-import { ErrorTypes, useRoute } from 'vue-router';
+import { ErrorTypes, useRoute, useRouter } from 'vue-router';
 import Sidebar from '../layout/sidebar.vue';
 import Header from '../layout/header.vue';
 import axios from 'axios';
@@ -95,7 +97,7 @@ const submitting = ref<boolean>(false);
 // 評論表單
 const commentForm = reactive({
   content: '',
-  title:''
+  title: ''
 });
 
 // 動態計算佈局邊距
@@ -111,7 +113,7 @@ const onCollapse = (isCollapsed: boolean, type: string) => {
 // 使用 Pinia Store 和 Vue Router
 const postStore = useAuthStore();
 const route = useRoute();
-
+const router = useRouter();
 // 日期格式化函數
 const formatDate = (date: string): string => {
   return new Date(date).toLocaleString('zh-TW', {
@@ -138,7 +140,9 @@ const loadPostData = async (postId: string) => {
     loading.value = false;
   }
 };
-
+const goToUserProfile = (id) => {
+  router.push({ name: 'userprofile', params: { id: id } });
+};
 // 處理評論提交
 const handleCommentSubmit = async () => {
   if (!postStore.userState.isAuthenticated) {
@@ -149,10 +153,10 @@ const handleCommentSubmit = async () => {
   submitting.value = true;
   try {
     const response = await axios.post('http://localhost:8000/api/post/comment/create', {
-      uid:postStore.userState.user?.uid,
-      una:postStore.userState.user?.una,
+      uid: postStore.userState.user?.uid,
+      una: postStore.userState.user?.una,
       pid: route.params.id,
-      title:commentForm.title,
+      title: commentForm.title,
       content: commentForm.content
     });
 

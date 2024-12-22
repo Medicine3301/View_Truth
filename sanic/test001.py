@@ -38,20 +38,24 @@ async def get_user_by_username(pool, username):
         async with conn.cursor(aiomysql.DictCursor) as cur:
             await cur.execute("SELECT * FROM users WHERE una = %s", (username,))
             return await cur.fetchone()
-    
-#輔助函數:查詢貼文最新的紀錄(貼文用)
+
+
+# 輔助函數:查詢貼文最新的紀錄(貼文用)
 async def get_latest_comm_id(pool):
     """
     查詢最新的 max_id_id。
     """
-    query = "SELECT MAX(CAST(SUBSTRING(comm_id, 3) AS UNSIGNED)) AS max_id FROM comments"
+    query = (
+        "SELECT MAX(CAST(SUBSTRING(comm_id, 3) AS UNSIGNED)) AS max_id FROM comments"
+    )
 
     async with pool.acquire() as conn:
         async with conn.cursor() as cur:
             await cur.execute(query)
             result = await cur.fetchone()
-            return result[0] if result[0] is not None else 0  # Handle case when no records exist
-
+            return (
+                result[0] if result[0] is not None else 0
+            )  # Handle case when no records exist
 
 
 # 註冊路由
@@ -107,6 +111,8 @@ async def register(request):
 
     except Exception as e:
         return json({"error": str(e)}, status=400)
+
+
 @app.post("/api/post/comment/create")
 async def PostCommentAdd(request):
     """用戶新增留言API
@@ -123,7 +129,7 @@ async def PostCommentAdd(request):
         # 獲取最新 news_id 並產生新 ID
         latest_news_id = await get_latest_comm_id(app.ctx.pool) + 1
         next_id = f"RP{latest_news_id}"  # 格式化
-        
+
         # 插入用戶數據
         async with app.ctx.pool.acquire() as conn:
             async with conn.cursor() as cur:
@@ -138,7 +144,7 @@ async def PostCommentAdd(request):
                         next_id,
                         data["uid"],
                         data["una"],
-                        data["content"]
+                        data["content"],
                     ),
                 )
                 await conn.commit()  # Ensure changes are committed
@@ -148,7 +154,7 @@ async def PostCommentAdd(request):
     except Exception as e:
         print(str(e))
         return json({"error": str(e)}, status=400)
-        
+
 
 # 登入路由
 @app.post("/api/login")

@@ -429,5 +429,42 @@ async def get_all_comment(request, pid):
         return json({"error": str(e)}, status=400)
 
 
+@app.get("/api/news/all")
+async def get_all_news(request):
+    """獲取所有新聞信息的 API"""
+    try:
+        async with app.ctx.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute(
+                    "SELECT newstitle , news_id, journ, newsclass,news_content ,suggest, score ,crea_date FROM news"
+                )
+                newsies = await cur.fetchall()
+
+                if not newsies:
+                    return json({"error": "沒有找到任何新聞"}, status=404)
+
+                # 處理每個新聞的數據
+                response = [
+                    {
+                        "newstitle": news["newstitle"],
+                        "news_id": news["news_id"],
+                        "journ": news["journ"],
+                        "newsclass": news["newsclass"],
+                        "news_content": news["news_content"],
+                        "suggest": news["suggest"],
+                        "score": news["score"],
+                        "crea_date": (
+                            news["crea_date"].isoformat() if news["crea_date"] else None
+                        ),
+                    }
+                    for news in newsies
+                ]
+
+                return json({"newsies": response}, status=200)
+    except Exception as e:
+        print(f"Error in get_all_newsies: {str(e)}")
+        return json({"error": str(e)}, status=400)
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000)

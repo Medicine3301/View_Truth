@@ -10,8 +10,8 @@ interface UserState {
         una: string
         email: string
         role: string
-        birthday:string
-        usex:string
+        birthday: string
+        usex: string
         avatar?: string
     } | null
     isAuthenticated: boolean
@@ -20,8 +20,8 @@ interface UserState {
         una: string
         email: string
         role: string
-        birthday:string
-        usex:string
+        birthday: string
+        usex: string
         avatar?: string
     } | null
 }
@@ -30,7 +30,7 @@ interface Community {
     cid: string
     cna: string
     descr: string
-    post_count:string
+    post_count: string
     last_update: string
 }
 interface post {
@@ -40,17 +40,18 @@ interface post {
     una: string
     title: string
     content: string
-    comm_count:string
+    comm_count: string
     crea_date: string
 }
-interface comment{
-    pid:string
-    comm_id:string
-    uid:string 
-    una:string
-    content:string
-    crea_date:string
-    nid:string
+interface comment {
+    pid: string
+    comm_id: string
+    uid: string
+    una: string
+    title: string
+    content: string
+    crea_date: string
+    nid: string
 }
 interface CommunityState {
     community: Community | null
@@ -59,8 +60,24 @@ interface CommunityState {
 interface Poststate {
     post: post | null
     posts: post[] | null
-    comment:comment | null
-    comments:comment[] |null
+    comment: comment | null
+    comments: comment[] | null
+}
+interface Newstate {
+    news: news | null
+    newsies: news[] | null
+    comment: comment | null
+    comments: comment[] | null
+}
+interface news {
+    newstitle: string
+    news_id: string
+    journ: string
+    newsclass: string
+    news_content: string
+    suggest: string
+    score: string
+    crea_date: string
 }
 interface RegisterUserData {
     name: string
@@ -69,27 +86,12 @@ interface RegisterUserData {
     sex: string
     birthday: Date
 }
-interface Newstate{
-    ananewsies :Ananews[]  |null
-    ananews:Ananews | null
-    comment:comment | null
-    commenties:comment[] | null
-}
-interface Ananews{
-    news_id:string
-    newstitle:string
-    journ:string
-    newsclass:string
-    count:string
-    news_content:string
-    suggest:string
-    score:string
-}
+
 // 狀態管理
 export const useAuthStore = defineStore('auth', {
     state: (): {
         userState: UserState; communityState: CommunityState
-        postState: Poststate; newsState:Newstate
+        postState: Poststate; newstate: Newstate
     } => ({
         userState: {
             user: null,
@@ -103,14 +105,14 @@ export const useAuthStore = defineStore('auth', {
         postState: {
             post: null,
             posts: null,
-            comment:null,
-            comments:null
+            comment: null,
+            comments: null
         },
-        newsState:{
-            comment:null,
-            commenties:null,
-            ananews:null,
-            ananewsies:null
+        newstate: {
+            news: null,
+            newsies: null,
+            comment: null,
+            comments: null
         }
     }),
     getters: {
@@ -335,6 +337,26 @@ export const useAuthStore = defineStore('auth', {
             } catch (error: any) {
                 notification.error({
                     message: '獲取所有留言信息失敗',
+                    description: error.response?.data?.error || '請稍後再試',
+                    duration: 3
+                });
+            }
+        },
+        async getAllnewsies() {
+            try {
+                const response = await axios.get('http://localhost:8000/api/news/all');
+                if (response.status === 200) {
+                    this.newstate.newsies = response.data.newsies as news[];
+                } else {
+                    notification.error({
+                        message: '沒有找到任何內容',
+                        description: '目前沒有可用的分析資料',
+                        duration: 3
+                    });
+                }
+            } catch (error: any) {
+                notification.error({
+                    message: '獲取所有內容信息失敗',
                     description: error.response?.data?.error || '請稍後再試',
                     duration: 3
                 });

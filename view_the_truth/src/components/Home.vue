@@ -110,7 +110,7 @@ const onCollapse = (isCollapsed: boolean, type: string) => {
     console.log(isCollapsed, type);
     // collapsed.value 會通過 v-model:collapsed 自動更新
 };
-const news =useAuthStore();
+
 </script>
 
 <style scoped>
@@ -128,6 +128,7 @@ const news =useAuthStore();
     background: linear-gradient(135deg, #f7f7f7, #ffe4e1);
     box-shadow: 0 6px 12px rgba(255, 127, 80, 0.2);
 }
+
 .carousel-content {
     text-align: center;
     font-size: 22px;
@@ -142,6 +143,7 @@ const news =useAuthStore();
     border-radius: 8px;
     overflow: hidden;
 }
+
 .content-card:hover {
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
     transform: translateY(-8px);
@@ -153,11 +155,13 @@ const news =useAuthStore();
     padding: 16px;
     border-radius: 8px;
 }
+
 .recommend-content-card {
     transition: all 0.3s ease;
     border-radius: 8px;
     overflow: hidden;
 }
+
 .recommend-content-card:hover {
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     transform: translateY(-5px);

@@ -24,13 +24,15 @@
 
                         <!-- 熱門新聞卡片 -->
                         <div class="hot-news-card" :style="{ display: 'flex', gap: '16px', marginBottom: '24px' }">
-                            <div class="hot-news-item" :style="{ flex: 1, padding: '16px', background: '#fafafa', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }">
+                            <div class="hot-news-item"
+                                :style="{ flex: 1, padding: '16px', background: '#fafafa', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }">
                                 <h2>熱門新聞</h2>
                                 <div v-for="h in 3" :key="h" :style="{ marginTop: '12px' }">
                                     <a href="#" @click.prevent="readHotNews(h)">熱門新聞標題 {{ h }}</a>
                                 </div>
                             </div>
-                            <div class="hot-news-item" :style="{ flex: 1, padding: '16px', background: '#fafafa', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }">
+                            <div class="hot-news-item"
+                                :style="{ flex: 1, padding: '16px', background: '#fafafa', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }">
                                 <h2>推薦新聞</h2>
                                 <div v-for="r in 3" :key="r" :style="{ marginTop: '12px' }">
                                     <a href="#" @click.prevent="readHotNews(r)">推薦新聞標題 {{ r }}</a>
@@ -39,17 +41,17 @@
                         </div>
                         <!-- 新聞文章列表 -->
                         <div class="news-list" :style="{ display: 'flex', flexDirection: 'column', gap: '16px' }">
-                            <div class="news-item" v-for="n in 5" :key="n" :style="{ padding: '16px', border: '1px solid #d9d9d9', borderRadius: '8px', background: '#fff', transition: 'transform 0.3s', cursor: 'pointer' }" @mouseover="hoverNewsItem(n)" @mouseleave="leaveNewsItem(n)" @click="readMore(n)">
-                                <h3 class="news-title">新聞標題 {{ n }}</h3>
-                                <p class="news-summary">這裡是新聞摘要部分，可以幫助用戶快速了解新聞的主要內容...</p>
+                            <div class="news-item" v-for="news in newsies" :key="news.news_id"
+                                :style="{ padding: '16px', border: '1px solid #d9d9d9', borderRadius: '8px', background: '#fff', transition: 'transform 0.3s', cursor: 'pointer' }">
+                                <h3 class="news-title">{{ news.newstitle }}</h3>
+                                <p class="news-summary">{{ news.news_content.length > maxLength ?
+                                    news.news_content.slice(0, maxLength) +
+                                    "..." : news.news_content }}</p>
                                 <a-button type="link">閱讀更多</a-button>
                             </div>
                         </div>
 
-                        <!-- 分頁器 -->
-                        <div :style="{ marginTop: '24px', textAlign: 'center' }">
-                            <a-pagination :default-current="6" :total="500" />
-                        </div>
+
                     </div>
                 </div>
             </a-layout-content>
@@ -61,7 +63,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import Sidebar from '../layout/sidebar.vue';
 import Header from '../layout/header.vue';
 import { useAuthStore } from '../stores/auth';
@@ -79,21 +81,24 @@ const onCollapse = (isCollapsed: boolean, type: string) => {
     console.log(isCollapsed, type);
     // collapsed.value 會通過 v-model:collapsed 自動更新
 };
-
-const newsstore=useAuthStore();
-const comment = computed(() => newsstore.newsState.comment)
-const news = computed(() => newsstore.newsState.ananews)
+//引用狀態列
+const newstore = useAuthStore();
+const newsies = computed(() => newstore.newstate.newsies)
 
 // 日期格式化函數
 const formatDate = (date: string): string => {
-  return new Date(date).toLocaleString('zh-TW', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+    return new Date(date).toLocaleString('zh-TW', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
 };
+// 在組件掛載時載入社群列表
+onMounted(async () => {
+    await newstore.getAllnewsies();
+})
 // 用戶交互方法
 const filterCategory = (category: string) => {
     console.log(`Filter category: ${category}`);
@@ -110,6 +115,8 @@ const readMore = (id: number) => {
 const readHotNews = (id: number) => {
     console.log(`Read more about hot news item: ${id}`);
 };
+// 處理最大字數
+const maxLength = 50 // 最大字數限制
 </script>
 
 <style scoped>
@@ -117,16 +124,19 @@ const readHotNews = (id: number) => {
     max-width: 1200px;
     margin: 0 auto;
 }
+
 .news-title {
     font-size: 18px;
     font-weight: bold;
     margin-bottom: 8px;
 }
+
 .news-summary {
     font-size: 14px;
     color: #666;
     margin-bottom: 12px;
 }
+
 .news-item:hover {
     transform: scale(1.02);
 }

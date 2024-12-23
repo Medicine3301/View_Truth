@@ -94,7 +94,7 @@
 import { computed, ref } from 'vue';
 import Sidebar from '../layout/sidebar.vue';
 import Header from '../layout/header.vue';
-
+import { useAuthStore } from '../stores/auth';
 // 側邊欄狀態
 const collapsed = ref(false);
 const broken = ref(false);
@@ -110,6 +110,7 @@ const onCollapse = (isCollapsed: boolean, type: string) => {
     console.log(isCollapsed, type);
     // collapsed.value 會通過 v-model:collapsed 自動更新
 };
+const news =useAuthStore();
 </script>
 
 <style scoped>

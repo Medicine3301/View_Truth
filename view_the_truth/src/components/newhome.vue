@@ -64,7 +64,7 @@
 import { computed, ref } from 'vue';
 import Sidebar from '../layout/sidebar.vue';
 import Header from '../layout/header.vue';
-
+import { useAuthStore } from '../stores/auth';
 // 側邊欄狀態
 const collapsed = ref(false);
 const broken = ref(false);
@@ -80,6 +80,20 @@ const onCollapse = (isCollapsed: boolean, type: string) => {
     // collapsed.value 會通過 v-model:collapsed 自動更新
 };
 
+const newsstore=useAuthStore();
+const comment = computed(() => newsstore.newsState.comment)
+const news = computed(() => newsstore.newsState.ananews)
+
+// 日期格式化函數
+const formatDate = (date: string): string => {
+  return new Date(date).toLocaleString('zh-TW', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
 // 用戶交互方法
 const filterCategory = (category: string) => {
     console.log(`Filter category: ${category}`);

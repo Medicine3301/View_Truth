@@ -12,7 +12,7 @@
                 <div class="post-header">
                   <h2 class="post-title">{{ post.title }}</h2>
                   <div class="post-meta">
-                    <a-avatar size="small" @click="goToUserProfile(post.uid)">{{ post.una.charAt(0) }}</a-avatar>
+                    <a-avatar class="avatar" size="small" @click="goToUserProfile(post.uid)">{{ post.una.charAt(0) }}</a-avatar>
                     <span class="author-name">{{ post.una }}</span>
                     <span class="post-time">{{ formatDate(post.crea_date) }}</span>
                     <!--評分模組-->
@@ -53,7 +53,7 @@
                   <div v-for="comment in comments" :key="comment.comm_id" class="comment-item">
                     <div class="comment-header">
                       <div class="comment-user">
-                        <a-avatar size="small" @click="goToUserProfile(comment.uid)">
+                        <a-avatar class="avatar" size="small" @click="goToUserProfile(comment.uid)">
                           {{ comment.una.charAt(0) }}
                         </a-avatar>
                         <span class="comment-author">{{ comment.una }}</span>
@@ -274,5 +274,11 @@ onMounted(async () => {
   line-height: 1.6;
   color: #666;
   margin-left: 32px;
+}
+.avatar{
+  cursor: pointer; /* 指定指標為手形 */
+}
+.avatar:hover{
+  transform: scale(1.02);
 }
 </style>

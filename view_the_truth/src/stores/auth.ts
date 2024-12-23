@@ -69,12 +69,27 @@ interface RegisterUserData {
     sex: string
     birthday: Date
 }
-
+interface Newstate{
+    ananewsies :Ananews[]  |null
+    ananews:Ananews | null
+    comment:comment | null
+    commenties:comment[] | null
+}
+interface Ananews{
+    news_id:string
+    newstitle:string
+    journ:string
+    newsclass:string
+    count:string
+    news_content:string
+    suggest:string
+    score:string
+}
 // 狀態管理
 export const useAuthStore = defineStore('auth', {
     state: (): {
         userState: UserState; communityState: CommunityState
-        postState: Poststate;
+        postState: Poststate; newsState:Newstate
     } => ({
         userState: {
             user: null,
@@ -90,6 +105,12 @@ export const useAuthStore = defineStore('auth', {
             posts: null,
             comment:null,
             comments:null
+        },
+        newsState:{
+            comment:null,
+            commenties:null,
+            ananews:null,
+            ananewsies:null
         }
     }),
     getters: {

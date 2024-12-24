@@ -362,6 +362,48 @@ export const useAuthStore = defineStore('auth', {
                 });
             }
         },
+        //沒動  news的
+        async getnewsInfo(nid: string) {
+            try {
+                const response = await axios.get(`http://localhost:8000/api/news/${nid}`);
+                if (response.status === 200) {
+                    this.newsState.news = response.data.news;
+                } else {
+                    notification.error({
+                        message: '新聞不存在',
+                        description: '無法找到該新聞',
+                        duration: 3
+                    });
+                }
+            } catch (error: any) {
+                notification.error({
+                    message: '獲取新聞信息失敗',
+                    description: error.response?.data?.error || '請稍後再試',
+                    duration: 3
+                });
+            }
+        },
+        //沒動  news的
+        async getNewsAllComments(nid: string) {
+            try {
+                const response = await axios.get(`http://localhost:8000/api/comment/${nid}`);
+                if (response.status === 200) {
+                    this.postState.comments = response.data.comments as comment[];
+                } else {
+                    notification.error({
+                        message: '沒有找到任何留言',
+                        description: '目前沒有可用的留言資料',
+                        duration: 3
+                    });
+                }
+            } catch (error: any) {
+                notification.error({
+                    message: '獲取所有留言信息失敗',
+                    description: error.response?.data?.error || '請稍後再試',
+                    duration: 3
+                });
+            }
+        },
         setupAxiosInterceptors() {
             axios.interceptors.request.use(
                 config => {

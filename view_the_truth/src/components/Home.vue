@@ -94,7 +94,6 @@
 import { computed, ref } from 'vue';
 import Sidebar from '../layout/sidebar.vue';
 import Header from '../layout/header.vue';
-import { useAuthStore } from '../stores/auth';
 // 側邊欄狀態
 const collapsed = ref(false);
 const broken = ref(false);

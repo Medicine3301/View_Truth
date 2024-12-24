@@ -42,7 +42,8 @@
                         <!-- 新聞文章列表 -->
                         <div class="news-list" :style="{ display: 'flex', flexDirection: 'column', gap: '16px' }">
                             <div class="news-item" v-for="news in newsies" :key="news.news_id"
-                                :style="{ padding: '16px', border: '1px solid #d9d9d9', borderRadius: '8px', background: '#fff', transition: 'transform 0.3s', cursor: 'pointer' }">
+                                :style="{ padding: '16px', border: '1px solid #d9d9d9', borderRadius: '8px', background: '#fff', transition: 'transform 0.3s', cursor: 'pointer' }"
+                                @click="goToNewspage(news.news_id)">
                                 <h3 class="news-title">{{ news.newstitle }}</h3>
                                 <p class="news-summary">{{ news.news_content.length > maxLength ?
                                     news.news_content.slice(0, maxLength) +
@@ -67,6 +68,8 @@ import { computed, onMounted, ref } from 'vue';
 import Sidebar from '../layout/sidebar.vue';
 import Header from '../layout/header.vue';
 import { useAuthStore } from '../stores/auth';
+import { message } from 'ant-design-vue';
+import router from '../router';
 // 側邊欄狀態
 const collapsed = ref(false);
 const broken = ref(false);
@@ -95,10 +98,21 @@ const formatDate = (date: string): string => {
         minute: '2-digit'
     });
 };
-// 在組件掛載時載入社群列表
+// 在組件掛載時載入新聞列表
 onMounted(async () => {
     await newstore.getAllnewsies();
 })
+const goToNewspage = async (newsId: string) => {
+  try {
+    await router.push({
+      name: 'newspage',
+      params: { id: newsId }
+    })
+  } catch (error) {
+    message.error('無法開啟新聞')
+    console.error('Error navigating to newspage:', error)
+  }
+}
 // 用戶交互方法
 const filterCategory = (category: string) => {
     console.log(`Filter category: ${category}`);

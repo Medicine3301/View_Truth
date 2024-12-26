@@ -57,7 +57,7 @@
           <a-form-item name="title" :rules="[{ required: true, message: '請輸入文章標題！' }]">
             <a-input v-model:value="postForm.title" placeholder="文章標題" />
           </a-form-item>
-          <tiny-fluent-editor v-model="value" :data-type="false" :data-upgrade="false" @toggleFullscreen="handleFullscreen" //>
+          <tiny-fluent-editor v-model="value" :data-type="false" :data-upgrade="false" />
           <div style="display: flex; justify-content: center; gap: 16px;">
             <a-button type="primary" html-type="submit" :loading="postLoading">
               發表
@@ -86,6 +86,7 @@ import { message } from 'ant-design-vue'
 import { MessageOutlined } from '@ant-design/icons-vue'
 import axios from 'axios'
 import { TinyFluentEditor } from '@opentiny/vue'
+
 const value=ref('')
 // 基本狀態
 const collapsed = ref(false)

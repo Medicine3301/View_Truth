@@ -54,11 +54,10 @@
       <a-modal v-model:open="postModalVisible" title="發表文章" :centered="true" :footer="null" :width="800"
         @cancel="handlePostCancel">
         <a-form :model="postForm" @finish="handlePostSubmit" :style="{ textAlign: 'left' }">
-          <div>
-            <tiny-fluent-editor v-model="value" :data-type="false" :data-upgrade="false"></tiny-fluent-editor>
-            内容：<br />
-            {{ value }}
-          </div>
+          <a-form-item name="title" :rules="[{ required: true, message: '請輸入文章標題！' }]">
+            <a-input v-model:value="postForm.title" placeholder="文章標題" />
+          </a-form-item>
+          <tiny-fluent-editor v-model="value" :data-type="false" :data-upgrade="false" @toggleFullscreen="handleFullscreen" //>
           <div style="display: flex; justify-content: center; gap: 16px;">
             <a-button type="primary" html-type="submit" :loading="postLoading">
               發表
@@ -87,8 +86,7 @@ import { message } from 'ant-design-vue'
 import { MessageOutlined } from '@ant-design/icons-vue'
 import axios from 'axios'
 import { TinyFluentEditor } from '@opentiny/vue'
-
-const value = ref('')
+const value=ref('')
 // 基本狀態
 const collapsed = ref(false)
 const loading = ref(true)
@@ -105,8 +103,7 @@ const posts = computed(() => authStore.postState.posts)
 const postModalVisible = ref(false)
 const postLoading = ref(false)
 const postForm = reactive({
-  title: '',
-  content: ''
+  title: ''
 })
 
 // 日期格式化
@@ -180,7 +177,6 @@ const showPostModal = () => {
 const handlePostCancel = () => {
   postModalVisible.value = false
   postForm.title = ''
-  postForm.content = ''
 }
 
 // 處理發文提交
@@ -192,10 +188,12 @@ const handlePostSubmit = async () => {
 
   try {
     postLoading.value = true
-    const response = await axios.post('http://localhost:8000/api/post/create', {
-      cid: route.params.id,
+    const response = await axios.post('http://localhost:8000/api/post/post/create', {
       title: postForm.title,
-      content: postForm.content
+      cid: route.params.id,
+      uid: authStore.userState.user?.uid,
+      una: authStore.userState.user?.una,
+      content: value
     })
 
     if (response.status === 201) {
@@ -205,6 +203,7 @@ const handlePostSubmit = async () => {
       // 重新載入貼文列表
       await loadCommunityData(route.params.id as string)
     }
+
   } catch (error: any) {
     message.error(error.response?.data?.error || '發表失敗，請稍後再試')
   } finally {

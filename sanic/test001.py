@@ -7,131 +7,89 @@ import bcrypt
 import uuid
 from datetime import datetime, timedelta
 
-
-# 創建Sanic應用
 app = Sanic("auth_app")
-# 啟用CORS支持
 CORS(app)
 
-# JWT配置
 SECRET_KEY = "therealeyecanseethetruth"
-
-# 數據庫配置
 DB_CONFIG = {
     "host": "127.0.0.1",
     "user": "root",
     "password": "123456",
     "db": "new_community",
     "charset": "utf8mb4",
-    "port": 3306  # 添加端口配置 家裡測試的人可以刪除這行 或者改成3306
+    "port": 3306
 }
 
-
-# 在服務器啟動前創建數據庫連接池
 @app.listener("before_server_start")
 async def setup_db(app, loop):
     app.ctx.pool = await aiomysql.create_pool(**DB_CONFIG, loop=loop, autocommit=True)
 
-
-# 輔助函數：根據用戶名查詢用戶
 async def get_user_by_username(pool, username):
     async with pool.acquire() as conn:
         async with conn.cursor(aiomysql.DictCursor) as cur:
             await cur.execute("SELECT * FROM users WHERE una = %s", (username,))
             return await cur.fetchone()
 
-
-# 輔助函數:查詢貼文最新的紀錄(貼文用)
-async def get_latest_comm_id(pool):
-    """
-    查詢最新的 max_id_id。
-    """
-    query = (
-        "SELECT MAX(CAST(SUBSTRING(comm_id, 3) AS UNSIGNED)) AS max_id FROM comments"
-    )
-
+async def get_latest_id(pool, table, id_field, prefix):
+    """通用的 ID 獲取函數"""
+    query = f"SELECT MAX(CAST(SUBSTRING({id_field}, {len(prefix) + 1}) AS UNSIGNED)) AS max_id FROM {table}"
     async with pool.acquire() as conn:
         async with conn.cursor() as cur:
             await cur.execute(query)
             result = await cur.fetchone()
-            return (
-                result[0] if result[0] is not None else 0
-            )  # Handle case when no records exist
+            return result[0] if result[0] is not None else 0
 
+async def get_latest_comm_id(pool):
+    return await get_latest_id(pool, "comments", "comm_id", "RP")
 
-# 註冊路由
+async def get_latest_post_id(pool):
+    return await get_latest_id(pool, "post", "pid", "P")
+
 @app.post("/api/register")
 async def register(request):
-    """用戶註冊API
-
-    接收：
-    - name: 用戶名
-    - email: 郵箱
-    - password: 密碼
-    - sex: 性別
-    - age: 年齡
-    """
     try:
         data = request.json
+        if not all(key in data for key in ["name", "email", "password", "sex", "birthday"]):
+            return json({"error": "缺少必要欄位"}, status=400)
 
-        # 檢查用戶名是否已存在
         existing_user = await get_user_by_username(app.ctx.pool, data["name"])
         if existing_user:
             return json({"error": "用戶名已存在"}, status=400)
 
-        # 生成唯一用戶ID
         uid = str(uuid.uuid4())
+        hashed_password = bcrypt.hashpw(data["password"].encode(), bcrypt.gensalt())
+        birthday_date = datetime.fromisoformat(data["birthday"]).date()
 
-        # 密碼加密
-        salt = bcrypt.gensalt()
-        hashed_password = bcrypt.hashpw(data["password"].encode(), salt)
-        # 將收到的 ISO 格式日期轉換為 'YYYY-MM-DD'
-        iso_birthday = data["birthday"]
-        birthday_date = datetime.fromisoformat(
-            iso_birthday
-        ).date()  # 使用 datetime 類的 fromisoformat 方法
-        # 插入用戶數據
         async with app.ctx.pool.acquire() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(
                     """
                     INSERT INTO users (uid, una, birthday, usex, email, passwd)
                     VALUES (%s, %s, %s, %s, %s, %s)
-                """,
-                    (
-                        uid,
-                        data["name"],
-                        birthday_date,
-                        data["sex"],
-                        data["email"],
-                        hashed_password.decode(),
-                    ),
+                    """,
+                    (uid, data["name"], birthday_date, data["sex"], 
+                     data["email"], hashed_password.decode())
                 )
+        return json({"message": "註冊成功", "uid": uid}, status=201)
 
-        return json({"message": "註冊成功"}, status=201)
-
+    except KeyError as e:
+        return json({"error": f"缺少必要欄位: {str(e)}"}, status=400)
+    except ValueError as e:
+        return json({"error": f"資料格式錯誤: {str(e)}"}, status=400)
     except Exception as e:
-        return json({"error": str(e)}, status=400)
-
+        return json({"error": f"服務器錯誤: {str(e)}"}, status=500)
 
 @app.post("/api/post/comment/create")
-async def PostCommentAdd(request):
-    """用戶新增留言API
-    接收：
-    - uid:用戶編號
-    - una:用戶名
-    - title:標題
-    - comm_id:貼文表編號
-    - content :內容
-    - pid :貼文編號
-    """
+async def post_comment_add(request):
     try:
         data = request.json
-        # 獲取最新 news_id 並產生新 ID
-        latest_news_id = await get_latest_comm_id(app.ctx.pool) + 1
-        next_id = f"RP{latest_news_id}"  # 格式化
+        required_fields = ["pid", "title", "uid", "una", "content"]
+        if not all(key in data for key in required_fields):
+            return json({"error": "缺少必要欄位"}, status=400)
 
-        # 插入用戶數據
+        latest_id = await get_latest_comm_id(app.ctx.pool)
+        next_id = f"RP{latest_id + 1}"
+
         async with app.ctx.pool.acquire() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(
@@ -139,23 +97,61 @@ async def PostCommentAdd(request):
                     INSERT INTO comments (pid, title, comm_id, uid, una, content)
                     VALUES (%s, %s, %s, %s, %s, %s)
                     """,
-                    (
-                        data["pid"],
-                        data["title"],
-                        next_id,
-                        data["uid"],
-                        data["una"],
-                        data["content"],
-                    ),
+                    (data["pid"], data["title"], next_id, 
+                     data["uid"], data["una"], data["content"])
                 )
-                await conn.commit()  # Ensure changes are committed
+                # 更新貼文的評論計數
+                await cur.execute(
+                    "UPDATE post SET comm_count = comm_count + 1 WHERE pid = %s",
+                    (data["pid"],)
+                )
 
-        return json({"message": "留言成功"}, status=201)
+        return json({
+            "message": "留言成功",
+            "comm_id": next_id
+        }, status=201)
 
     except Exception as e:
-        print(str(e))
-        return json({"error": str(e)}, status=400)
+        return json({"error": f"服務器錯誤: {str(e)}"}, status=500)
 
+@app.post("/api/post/post/create")
+async def post_add(request):
+    try:
+        data = request.json
+        required_fields = ["title", "cid", "uid", "una", "content"]
+        if not all(key in data for key in required_fields):
+            return json({"error": "缺少必要欄位"}, status=400)
+
+        latest_id = await get_latest_post_id(app.ctx.pool)
+        next_id = f"P{latest_id + 1}"
+
+        async with app.ctx.pool.acquire() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(
+                    """
+                    INSERT INTO post (pid, title, cid, uid, una, content)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    """,
+                    (next_id, data["title"], data["cid"], 
+                     data["uid"], data["una"], data["content"])
+                )
+                # 更新社群的貼文計數和最後更新時間
+                await cur.execute(
+                    """
+                    UPDATE community 
+                    SET post_count = post_count + 1, last_update = NOW()
+                    WHERE cid = %s
+                    """,
+                    (data["cid"],)
+                )
+
+        return json({
+            "message": "貼文發佈成功",
+            "pid": next_id
+        }, status=201)
+
+    except Exception as e:
+        return json({"error": f"服務器錯誤: {str(e)}"}, status=500)
 
 # 登入路由
 @app.post("/api/login")

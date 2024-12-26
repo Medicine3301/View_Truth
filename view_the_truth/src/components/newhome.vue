@@ -48,7 +48,6 @@
                                 <p class="news-summary">{{ news.news_content.length > maxLength ?
                                     news.news_content.slice(0, maxLength) +
                                     "..." : news.news_content }}</p>
-                                <a-button type="link">閱讀更多</a-button>
                             </div>
                         </div>
 

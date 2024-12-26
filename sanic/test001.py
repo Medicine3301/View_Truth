@@ -23,7 +23,7 @@ DB_CONFIG = {
     "password": "123456",
     "db": "new_community",
     "charset": "utf8mb4",
-    "port": 3305  # 添加端口配置 家裡測試的人可以刪除這行 或者改成3306
+    "port": 3306  # 添加端口配置 家裡測試的人可以刪除這行 或者改成3306
 }
 
 

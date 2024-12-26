@@ -54,17 +54,11 @@
       <a-modal v-model:open="postModalVisible" title="發表文章" :centered="true" :footer="null" :width="800"
         @cancel="handlePostCancel">
         <a-form :model="postForm" @finish="handlePostSubmit" :style="{ textAlign: 'left' }">
-          <!-- 文章標題 -->
-          <a-form-item name="title" :rules="[{ required: true, message: '請輸入文章標題！' }]">
-            <a-input v-model:value="postForm.title" placeholder="文章標題" />
-          </a-form-item>
-
-          <!-- 文章內容 -->
-          <a-form-item name="content" :rules="[{ required: true, message: '請輸入文章內容！' }]">
-            <a-textarea v-model:value="postForm.content" placeholder="文章內容" :auto-size="{ minRows: 4, maxRows: 8 }" />
-          </a-form-item>
-
-          <!-- 提交按鈕 -->
+          <div>
+            <tiny-fluent-editor v-model="value" :data-type="false" :data-upgrade="false"></tiny-fluent-editor>
+            内容：<br />
+            {{ value }}
+          </div>
           <div style="display: flex; justify-content: center; gap: 16px;">
             <a-button type="primary" html-type="submit" :loading="postLoading">
               發表
@@ -92,7 +86,9 @@ import Header from '../layout/header.vue'
 import { message } from 'ant-design-vue'
 import { MessageOutlined } from '@ant-design/icons-vue'
 import axios from 'axios'
+import { TinyFluentEditor } from '@opentiny/vue'
 
+const value = ref('')
 // 基本狀態
 const collapsed = ref(false)
 const loading = ref(true)

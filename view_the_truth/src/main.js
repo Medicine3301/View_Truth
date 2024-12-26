@@ -10,7 +10,7 @@ import 'vuetify/styles'
 import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
-
+import TinyVue from '@opentiny/vue'
 const app = createApp(App)
 const pinia = createPinia()
 
@@ -26,6 +26,7 @@ app.use(pinia)
     .use(router)
     .use(Antd)  // 使用 Ant Design Vue
     .use(vuetify)// 使用vuetify
+    .use(TinyVue)
     .mount('#app')
 
 // 主入口文件：创建 Vue 应用实例，集成 Pinia、Vue Router、Element Plus 和 Ant Design Vue

@@ -100,11 +100,7 @@ async def post_comment_add(request):
                     (data["pid"], data["title"], next_id, 
                      data["uid"], data["una"], data["content"])
                 )
-                # 更新貼文的評論計數
-                await cur.execute(
-                    "UPDATE post SET comm_count = comm_count + 1 WHERE pid = %s",
-                    (data["pid"],)
-                )
+                
 
         return json({
             "message": "留言成功",
@@ -134,15 +130,6 @@ async def post_add(request):
                     """,
                     (next_id, data["title"], data["cid"], 
                      data["uid"], data["una"], data["content"])
-                )
-                # 更新社群的貼文計數和最後更新時間
-                await cur.execute(
-                    """
-                    UPDATE community 
-                    SET post_count = post_count + 1, last_update = NOW()
-                    WHERE cid = %s
-                    """,
-                    (data["cid"],)
                 )
 
         return json({
@@ -398,8 +385,6 @@ async def get_all_comment(request, pid):
                 ),
                 comments = await cur.fetchall()
 
-                if not comments:
-                    return json({"error": "找尋不到任何留言"}, status=404)
 
                 # 處理每個留言的數據
                 response = [

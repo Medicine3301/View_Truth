@@ -29,10 +29,6 @@
                     <h3 class="post-title">{{ post.title }}</h3>
                     <span class="post-date">{{ formatDate(post.crea_date) }}</span>
                   </div>
-                  <div>
-                    <p class="post-content">{{ post.content.length > maxLength ? post.content.slice(0, maxLength) +
-                      "..." : post.content }}</p>
-                  </div>
                   <div class="post-footer">
                     <a-avatar size="small" class="user-avatar">{{ post.una.charAt(0) }}</a-avatar>
                     <span class="user-name">{{ post.una }}</span>
@@ -58,6 +54,7 @@
             <a-input v-model:value="postForm.title" placeholder="文章標題" />
           </a-form-item>
           <tiny-fluent-editor v-model="value" :data-type="false" :data-upgrade="false" />
+          內容:{{value}}
           <div style="display: flex; justify-content: center; gap: 16px;">
             <a-button type="primary" html-type="submit" :loading="postLoading">
               發表
@@ -194,7 +191,7 @@ const handlePostSubmit = async () => {
       cid: route.params.id,
       uid: authStore.userState.user?.uid,
       una: authStore.userState.user?.una,
-      content: value
+      content: value.value
     })
 
     if (response.status === 201) {

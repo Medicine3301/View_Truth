@@ -22,8 +22,7 @@
                   </div>
                 </div>
               </template>
-              <div class="post-content">
-                {{ post.content }}
+              <div class="post-content" v-html="post.content">
               </div>
             </a-card>
 

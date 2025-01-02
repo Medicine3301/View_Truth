@@ -416,8 +416,42 @@ async def get_all_comment(request, pid):
     except Exception as e:
         print(f"Error in get_all_comments: {str(e)}")
         return json({"error": str(e)}, status=400)
+@app.get("/api/ncomment/<nid>")
+async def get_all_ncomment(request, nid):
+    """獲取所有貼文留言信息的 API"""
+    try:
+        async with app.ctx.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute(
+                    "SELECT pid,uid,una,comm_id,nid,title,content,crea_date FROM comments where nid=%s",
+                    (nid,),
+                ),
+                comments = await cur.fetchall()
 
 
+                # 處理每個留言的數據
+                response = [
+                    {
+                        "pid": comment["pid"],
+                        "uid": comment["uid"],
+                        "una": comment["una"],
+                        "comm_id": comment["comm_id"],
+                        "nid": comment["nid"],
+                        "title": comment["title"],
+                        "content": comment["content"],
+                        "crea_date": (
+                            comment["crea_date"].isoformat()
+                            if comment["crea_date"]
+                            else None
+                        ),
+                    }
+                    for comment in comments
+                ]
+
+                return json({"comments": response}, status=200)
+    except Exception as e:
+        print(f"Error in get_all_comments: {str(e)}")
+        return json({"error": str(e)}, status=400)
 @app.get("/api/news/all")
 async def get_all_news(request):
     """獲取所有新聞信息的 API"""
@@ -452,6 +486,31 @@ async def get_all_news(request):
                 return json({"newsies": response}, status=200)
     except Exception as e:
         print(f"Error in get_all_newsies: {str(e)}")
+        return json({"error": str(e)}, status=400)
+@app.get("/api/news/<nid>")
+async def get_news_info(request, nid):
+    """獲取新聞信息的 API"""
+    try:
+        async with app.ctx.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute(
+                    "SELECT newstitle , news_id, journ, newsclass,news_content ,suggest, score ,crea_date FROM news where news_id=%s",
+                    (nid,),
+                ),
+                new = await cur.fetchone()
+
+                if not new:
+                    return json({"error": "找尋不到該貼文"}, status=404)
+
+                # 處理 datetime轉換格式
+                news = dict(new)
+                news["crea_date"] = (
+                    news["crea_date"].isoformat() if news["crea_date"] else None
+                )
+
+                return json({"post": news}, status=200)
+    except Exception as e:
+        print(f"Error in get_news_info: {str(e)}")
         return json({"error": str(e)}, status=400)
 
 

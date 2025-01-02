@@ -344,6 +344,26 @@ export const useAuthStore = defineStore('auth', {
                 });
             }
         },
+        async getAllnComments(nid: string) {
+            try {
+                const response = await axios.get(`http://localhost:8000/api/comment/${nid}`);
+                if (response.status === 200) {
+                    this.newsState.comments = response.data.comments as comment[];
+                } else {
+                    notification.error({
+                        message: '沒有找到任何留言',
+                        description: '目前沒有可用的留言資料',
+                        duration: 3
+                    });
+                }
+            } catch (error: any) {
+                notification.error({
+                    message: '獲取所有留言信息失敗',
+                    description: error.response?.data?.error || '請稍後再試',
+                    duration: 3
+                });
+            }
+        },
         async getAllnewsies() {
             try {
                 const response = await axios.get('http://localhost:8000/api/news/all');

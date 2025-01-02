@@ -228,6 +228,9 @@ onMounted(async () => {
   font-size: 16px;
   line-height: 1.8;
   margin-top: 24px;
+  word-wrap: break-word; /* 让长单词或连续字符自动换行 */
+  word-break: break-word; /* 强制换行，适用于多种语言 */
+  white-space: normal; /* 确保文字正常换行，而不是保留空格或强制单行显示 */
 }
 
 .comment-form {

@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import axios from 'axios'
 import { notification } from 'ant-design-vue'
-import { onMounted } from 'vue';
+
 
 // 宣告
 interface UserState {
@@ -12,6 +12,7 @@ interface UserState {
         role: string
         birthday: string
         usex: string
+        reg_date:string
         avatar?: string
     } | null
     isAuthenticated: boolean
@@ -22,6 +23,7 @@ interface UserState {
         role: string
         birthday: string
         usex: string
+        reg_date:string
         avatar?: string
     } | null
 }

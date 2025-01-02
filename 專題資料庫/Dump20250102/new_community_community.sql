@@ -30,6 +30,7 @@ CREATE TABLE `community` (
   `crea_na` varchar(50) DEFAULT NULL,
   `crea_date` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `last_update` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `post_count` int DEFAULT '0',
   PRIMARY KEY (`cid`),
   KEY `crea_id` (`crea_id`),
   CONSTRAINT `community_ibfk_1` FOREIGN KEY (`crea_id`) REFERENCES `users` (`uid`)
@@ -42,7 +43,7 @@ CREATE TABLE `community` (
 
 LOCK TABLES `community` WRITE;
 /*!40000 ALTER TABLE `community` DISABLE KEYS */;
-INSERT INTO `community` VALUES ('f8b79c16-f589-41d4-84b3-8e73f6ccb307','C001','八卦','就是八卦','acrhjh','2024-11-13 04:42:41','2024-11-13 05:21:07'),('f8b79c16-f589-41d4-84b3-8e73f6ccb307','C002','闢謠','就是闢謠','acrhjh','2024-11-13 04:42:41','2024-11-13 04:42:41'),('f8b79c16-f589-41d4-84b3-8e73f6ccb307','C003','感情','就是感情','acrhjh','2024-11-13 04:42:41','2024-11-13 04:42:41'),('f8b79c16-f589-41d4-84b3-8e73f6ccb307','C004','新聞','就是新聞','acrhjh','2024-11-13 04:42:41','2024-11-13 04:42:41'),('f8b79c16-f589-41d4-84b3-8e73f6ccb307','C005','股票','就是股票','acrhjh','2024-11-13 04:42:41','2024-11-13 04:42:41');
+INSERT INTO `community` VALUES ('f8b79c16-f589-41d4-84b3-8e73f6ccb307','C001','八卦','就是八卦','acrhjh','2024-11-13 04:42:41','2024-12-27 07:50:43',4),('f8b79c16-f589-41d4-84b3-8e73f6ccb307','C002','闢謠','就是闢謠','acrhjh','2024-11-13 04:42:41','2025-01-02 02:59:27',5),('f8b79c16-f589-41d4-84b3-8e73f6ccb307','C003','感情','就是感情','acrhjh','2024-11-13 04:42:41','2024-11-21 06:12:19',1),('f8b79c16-f589-41d4-84b3-8e73f6ccb307','C004','新聞','就是新聞','acrhjh','2024-11-13 04:42:41','2024-11-21 06:12:37',2),('f8b79c16-f589-41d4-84b3-8e73f6ccb307','C005','股票','就是股票','acrhjh','2024-11-13 04:42:41','2024-12-27 08:07:21',2),('f8b79c16-f589-41d4-84b3-8e73f6ccb307','C006','運動','就是運動','acrhjh','2024-11-13 06:16:03','2024-11-21 06:13:32',2),('f8b79c16-f589-41d4-84b3-8e73f6ccb307','C007','財經','最新財經新聞','acrhjh','2024-11-13 06:28:38','2024-11-21 06:13:53',2),('f8b79c16-f589-41d4-84b3-8e73f6ccb307','C008','政治','政治內亂','acrhjh','2024-11-13 06:28:38','2024-11-21 06:14:25',2),('f8b79c16-f589-41d4-84b3-8e73f6ccb307','C009','外國新聞','林書豪','acrhjh','2024-11-13 06:28:38','2024-11-21 06:14:46',2),('f8b79c16-f589-41d4-84b3-8e73f6ccb307','C010','美食','台灣美食','acrhjh','2024-11-13 06:28:38','2024-11-21 06:15:16',6);
 /*!40000 ALTER TABLE `community` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -55,4 +56,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-11-13 13:56:26
+-- Dump completed on 2025-01-02 11:26:55

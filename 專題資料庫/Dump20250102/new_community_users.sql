@@ -30,6 +30,7 @@ CREATE TABLE `users` (
   `passwd` varchar(100) DEFAULT NULL,
   `birthday` date DEFAULT NULL,
   `role` enum('user','admin') DEFAULT 'user',
+  `reg_date` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`uid`),
   UNIQUE KEY `users_una_unique` (`una`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -41,7 +42,7 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES ('9dcc32d5-4726-4273-8937-3aa3709097cd','123','1','aaaaa@bbb.mm','$2b$12$R4RzD.rc3JRxokAnRRshSeymNO86qHV.utdXSUQ5j4utpnHBozaw.','2007-10-10','user'),('f8b79c16-f589-41d4-84b3-8e73f6ccb307','acrhjh','1','aaddd@bb.ccC','$2b$12$9QBrsjqzjkMtKTLIpJi.x.L.HOe960Eh6Qd5p6A332SS3b0gZ3mia','2014-10-16','admin');
+INSERT INTO `users` VALUES ('9dcc32d5-4726-4273-8937-3aa3709097cd','123','1','aaaaa@bbb.mm','$2b$12$R4RzD.rc3JRxokAnRRshSeymNO86qHV.utdXSUQ5j4utpnHBozaw.','2007-10-10','user','2025-01-02 03:07:07'),('f1701c74-b5cf-4be2-a687-93454748d7ac','123456','1','AAA@CCC.VVVV','$2b$12$2P1i.Og3y4gUxB7CK/rqi.KeBfKznOR8XAEYjAnmjNk0dmx4TKgbK','2020-01-08','user','2025-01-02 03:07:07'),('f8b79c16-f589-41d4-84b3-8e73f6ccb307','acrhjh','1','aaddd@bb.ccC','$2b$12$9QBrsjqzjkMtKTLIpJi.x.L.HOe960Eh6Qd5p6A332SS3b0gZ3mia','2014-10-16','admin','2025-01-02 03:07:07');
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -54,4 +55,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-11-21 14:15:36
+-- Dump completed on 2025-01-02 11:26:55

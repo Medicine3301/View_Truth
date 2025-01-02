@@ -138,7 +138,7 @@
                   {{ formatDate(otherUser?.birthday) }}
                 </a-descriptions-item>
                 <a-descriptions-item label="註冊時間">
-                  2024-01-01
+                  {{formatDate(otherUser?.reg_date)}}
                 </a-descriptions-item>
               </a-descriptions>
             </a-tab-pane>

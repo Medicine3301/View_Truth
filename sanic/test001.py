@@ -7,10 +7,12 @@ import bcrypt
 import uuid
 from datetime import datetime, timedelta
 
+
 app = Sanic("auth_app")
 CORS(app)
-
+#token
 SECRET_KEY = "therealeyecanseethetruth"
+#db資訊
 DB_CONFIG = {
     "host": "127.0.0.1",
     "user": "root",
@@ -20,16 +22,18 @@ DB_CONFIG = {
     "port": 3306
 }
 
+
 @app.listener("before_server_start")
+#set db
 async def setup_db(app, loop):
     app.ctx.pool = await aiomysql.create_pool(**DB_CONFIG, loop=loop, autocommit=True)
-
+#輔助程式-抓用戶資料
 async def get_user_by_username(pool, username):
     async with pool.acquire() as conn:
         async with conn.cursor(aiomysql.DictCursor) as cur:
             await cur.execute("SELECT * FROM users WHERE una = %s", (username,))
             return await cur.fetchone()
-
+#輔助程式-抓最後一個資料
 async def get_latest_id(pool, table, id_field, prefix):
     """通用的 ID 獲取函數"""
     query = f"SELECT MAX(CAST(SUBSTRING({id_field}, {len(prefix) + 1}) AS UNSIGNED)) AS max_id FROM {table}"
@@ -38,7 +42,7 @@ async def get_latest_id(pool, table, id_field, prefix):
             await cur.execute(query)
             result = await cur.fetchone()
             return result[0] if result[0] is not None else 0
-
+#insert 用
 async def get_latest_comm_id(pool):
     return await get_latest_id(pool, "comments", "comm_id", "RP")
 
@@ -227,7 +231,7 @@ async def get_user_info(request, uid):
         async with app.ctx.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 await cur.execute(
-                    "SELECT uid, una, email, role,birthday,usex FROM users WHERE uid = %s",
+                    "SELECT uid, una, email, role,birthday,usex,reg_date FROM users WHERE uid = %s",
                     (uid,),
                 )
                 user = await cur.fetchone()
@@ -237,6 +241,9 @@ async def get_user_info(request, uid):
                 user = dict(user)
                 user["birthday"] = (
                     user["birthday"].isoformat() if user["birthday"] else None
+                )
+                user["reg_date"] = (
+                    user["reg_date"].isoformat() if user["reg_date"] else None
                 )
 
                 return json({"user": user}, status=200)

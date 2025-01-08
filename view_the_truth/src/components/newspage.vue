@@ -20,7 +20,7 @@
                   </div>
                 </template>
                 <div class="post-content">
-                    <h2>{{ news. journ}}</h2>
+                    <a :href="news.journ" target="_blank">新聞連結</a>
                     <p>{{news.news_content}}</p>
                     <p>{{news.suggest}}</p>
                     <p>分數:{{news.score}}</p>
@@ -71,7 +71,7 @@
                 </div>
               </a-card>
             </template>
-            <a-empty v-else description="貼文不存在或已被刪除" />
+            <a-empty v-else description="新聞不存在或已被刪除" />
           </a-spin>
         </a-layout-content>
         <a-layout-footer style="text-align: center">
@@ -133,11 +133,11 @@
     try {
       await Promise.all([
         newsStore.getnewsInfo(newsId),
-        newsStore.getAllnComments(newsId)
+        newsStore.getNewsAllComments(newsId)
       ]);
     } catch (error) {
       message.error('載入新聞失敗');
-      console.error('Error loading post data:', error);
+      console.error('Error loading news data:', error);
     } finally {
       loading.value = false;
     }
@@ -165,7 +165,7 @@
       if (response.status === 201) {
         message.success('評論發表成功');
         commentForm.content = ''; // 清空評論框
-        await newsStore.getAllnComments(route.params.id as string); // 重新加載評論
+        await newsStore.getNewsAllComments(route.params.id as string); // 重新加載評論
       }
     } catch (error: any) {
       message.error(error.response?.data?.error || '評論發表失敗');
@@ -178,7 +178,7 @@
   const news = computed(() => newsStore.newstate.news);
   const comments = computed(() => newsStore.newstate.comments);
   
-  // 當組件掛載時，根據路由參數查詢貼文資訊
+  // 當組件掛載時，根據路由參數查詢新聞資訊
   onMounted(async () => {
     const newsId = route.params.id as string;
     if (newsId) {

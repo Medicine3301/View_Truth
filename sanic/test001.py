@@ -19,7 +19,7 @@ DB_CONFIG = {
     "password": "123456",
     "db": "new_community",
     "charset": "utf8mb4",
-    "port": 3306
+    "port": 3305
 }
 
 
@@ -45,6 +45,9 @@ async def get_latest_id(pool, table, id_field, prefix):
 #insert 用
 async def get_latest_comm_id(pool):
     return await get_latest_id(pool, "comments", "comm_id", "RP")
+
+async def get_latest_ncomm_id(pool):
+    return await get_latest_id(pool, "comments", "comm_id", "RN")
 
 async def get_latest_post_id(pool):
     return await get_latest_id(pool, "post", "pid", "P")
@@ -99,6 +102,37 @@ async def post_comment_add(request):
                 await cur.execute(
                     """
                     INSERT INTO comments (pid, title, comm_id, uid, una, content)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    """,
+                    (data["pid"], data["title"], next_id, 
+                     data["uid"], data["una"], data["content"])
+                )
+                
+
+        return json({
+            "message": "留言成功",
+            "comm_id": next_id
+        }, status=201)
+
+    except Exception as e:
+        return json({"error": f"服務器錯誤: {str(e)}"}, status=500)
+
+@app.post("/api/news/comment/create")
+async def post_comment_add(request):
+    try:
+        data = request.json
+        required_fields = ["nid", "title", "uid", "una", "content"]
+        if not all(key in data for key in required_fields):
+            return json({"error": "缺少必要欄位"}, status=400)
+
+        latest_id = await get_latest_ncomm_id(app.ctx.pool)
+        next_id = f"RN{latest_id + 1}"
+
+        async with app.ctx.pool.acquire() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(
+                    """
+                    INSERT INTO comments (nid, title, comm_id, uid, una, content)
                     VALUES (%s, %s, %s, %s, %s, %s)
                     """,
                     (data["pid"], data["title"], next_id, 
@@ -494,24 +528,25 @@ async def get_news_info(request, nid):
         async with app.ctx.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 await cur.execute(
-                    "SELECT newstitle , news_id, journ, newsclass,news_content ,suggest, score ,crea_date FROM news where news_id=%s",
+                    "SELECT newstitle , news_id, journ, newsclass, news_content, suggest, score, crea_date FROM news WHERE news_id=%s",
                     (nid,),
-                ),
+                )
                 new = await cur.fetchone()
 
                 if not new:
+                    print(f"News ID {nid} 不存在")
                     return json({"error": "找尋不到該貼文"}, status=404)
 
-                # 處理 datetime轉換格式
+                # 處理 datetime 轉換格式
                 news = dict(new)
-                news["crea_date"] = (
-                    news["crea_date"].isoformat() if news["crea_date"] else None
-                )
+                news["crea_date"] = news["crea_date"].isoformat() if news["crea_date"] else None
 
-                return json({"post": news}, status=200)
+                print(f"成功獲取新聞: {news}")  # 添加日志
+                return json({"news": news}, status=200)
     except Exception as e:
-        print(f"Error in get_news_info: {str(e)}")
+        print(f"Error in get_news_info: {str(e)}")  # 打印错误日志
         return json({"error": str(e)}, status=400)
+
 
 
 if __name__ == "__main__":

@@ -12,36 +12,78 @@
                 <div class="post-header">
                   <h2 class="post-title">{{ post.title }}</h2>
                   <div class="post-meta">
-                    <a-avatar class="avatar" size="small" @click="goToUserProfile(post.uid)">{{ post.una.charAt(0)
-                    }}</a-avatar>
+                    <a-avatar class="avatar" size="small" @click="goToUserProfile(post.uid)">
+                      {{ post.una.charAt(0) }}
+                    </a-avatar>
                     <span class="author-name">{{ post.una }}</span>
                     <span class="post-time">{{ formatDate(post.crea_date) }}</span>
-                    <!--評分模組-->
                     <a-rate v-model:value="value" />
-                    <FormOutlined />
+                    <FormOutlined @click="showEditModal" v-if="canEdit" />
                   </div>
                 </div>
               </template>
-              <div class="post-content" v-html="post.content">
-              </div>
+              <div class="post-content" v-html="sanitizedContent"></div>
             </a-card>
+
+            <!-- 編輯貼文的彈窗 -->
+            <a-modal
+              v-model:visible="editModalVisible"
+              title="編輯貼文"
+              @ok="handleEditSubmit"
+              :confirmLoading="editSubmitting"
+              @cancel="handleEditCancel"
+              width="800px"
+            >
+              <a-form :model="editForm" layout="vertical">
+                <a-form-item
+                  label="標題"
+                  name="title"
+                  :rules="[{ required: true, message: '請輸入標題' }]"
+                >
+                  <a-input v-model:value="editForm.title" />
+                </a-form-item>
+                <a-form-item
+                  label="內容"
+                  name="content"
+                  :rules="[{ required: true, message: '請輸入內容' }]"
+                >
+                  <Editor
+                    v-model="editForm.content"
+                    :init="editorConfig"
+                    api-key="ci5pu95qkbehxg0n46696e18lgou1726k31jwvfad8hgz6f2"
+                    @onClick="handleEditorClick"
+                  />
+                </a-form-item>
+              </a-form>
+            </a-modal>
 
             <!-- 評論區塊 -->
             <a-card class="comment-card" :bordered="false" title="評論">
-              <!-- 發表評論 -->
               <div class="comment-form">
                 <a-form :model="commentForm" @finish="handleCommentSubmit">
                   <a-form-item name="title" :rules="[{ required: true, message: '請輸入標題' }]">
-                    <a-textarea v-model:value="commentForm.title" :rows="1" placeholder="寫下你的標題..."
-                      :disabled="!postStore.userState.isAuthenticated" />
+                    <a-textarea
+                      v-model:value="commentForm.title"
+                      :rows="1"
+                      placeholder="寫下你的標題..."
+                      :disabled="!postStore.userState.isAuthenticated"
+                    />
                   </a-form-item>
                   <a-form-item name="content" :rules="[{ required: true, message: '請輸入評論內容' }]">
-                    <a-textarea v-model:value="commentForm.content" :rows="4" placeholder="寫下你的評論..."
-                      :disabled="!postStore.userState.isAuthenticated" />
+                    <a-textarea
+                      v-model:value="commentForm.content"
+                      :rows="4"
+                      placeholder="寫下你的評論..."
+                      :disabled="!postStore.userState.isAuthenticated"
+                    />
                   </a-form-item>
                   <a-form-item>
-                    <a-button type="primary" html-type="submit" :loading="submitting"
-                      :disabled="!postStore.userState.isAuthenticated">
+                    <a-button
+                      type="primary"
+                      html-type="submit"
+                      :loading="submitting"
+                      :disabled="!postStore.userState.isAuthenticated"
+                    >
                       發表評論
                     </a-button>
                   </a-form-item>
@@ -62,6 +104,7 @@
                       <span class="comment-time">{{ formatDate(comment.crea_date) }}</span>
                     </div>
                     <div class="comment-content">
+                      <h4>{{ comment.title }}</h4>
                       {{ comment.content }}
                     </div>
                   </div>
@@ -82,15 +125,18 @@
 
 <script lang="ts" setup>
 import { useAuthStore } from '../stores/auth';
-import { onMounted, computed, ref, reactive } from 'vue';
-import { ErrorTypes, useRoute, useRouter } from 'vue-router';
+import { onMounted, computed, ref, reactive, nextTick } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import Sidebar from '../layout/sidebar.vue';
 import Header from '../layout/header.vue';
 import axios from 'axios';
-import { message, notification } from 'ant-design-vue';
-import { TinyFluentEditor } from '@opentiny/vue'
+import { message } from 'ant-design-vue';
+import { FormOutlined } from '@ant-design/icons-vue';
+import DOMPurify from 'dompurify';
+import Editor from '@tinymce/tinymce-vue';
+
+const textvalue = ref('');
 const value = ref<number>(2);
-// 側邊欄狀態管理
 const collapsed = ref<boolean>(false);
 const broken = ref<boolean>(false);
 const loading = ref<boolean>(true);
@@ -102,21 +148,66 @@ const commentForm = reactive({
   title: ''
 });
 
-// 動態計算佈局邊距
-const layoutMargin = computed<string>(() => {
+// 編輯相關
+const editModalVisible = ref<boolean>(false);
+const editSubmitting = ref<boolean>(false);
+const editForm = reactive({
+  title: '',
+  content: ''
+});
+
+// TinyMCE 編輯器配置
+const editorConfig = {
+  height: 500,
+  menubar: true,
+  plugins: [
+    'advlist', 'autolink', 'lists', 'link', 'image', 'charmap',
+    'preview', 'anchor', 'searchreplace', 'visualblocks', 'code',
+    'fullscreen', 'insertdatetime', 'media', 'table', 'paste',
+    'code', 'help', 'wordcount'
+  ],
+  toolbar: 'undo redo | formatselect | ' +
+    'bold italic backcolor | alignleft aligncenter ' +
+    'alignright alignjustify | bullist numlist outdent indent | ' +
+    'removeformat | help',
+  content_style: `
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; font-size: 14px; }
+    img { max-width: 100%; height: auto; }
+  `,
+  language: 'zh_TW',
+  branding: false,
+  elementpath: false,
+  convert_urls: false,
+  relative_urls: false,
+  paste_data_images: true,
+  images_upload_handler: async (blobInfo: any, progress: any) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', blobInfo.blob(), blobInfo.filename());
+      
+      const response = await axios.post('http://localhost:8000/api/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (e) => {
+          progress(e.loaded / e.total * 100);
+        }
+      });
+      
+      return response.data.url;
+    } catch (error) {
+      console.error('Image upload failed:', error);
+      throw new Error('圖片上傳失敗');
+    }
+  }
+};
+
+const layoutMargin = computed(() => {
   return collapsed.value ? '0px' : broken.value ? '200px' : '200px';
 });
 
-// 處理側邊欄收合事件
-const onCollapse = (isCollapsed: boolean, type: string) => {
-  console.log(`Sidebar collapsed: ${isCollapsed}, Type: ${type}`);
-};
-
-// 使用 Pinia Store 和 Vue Router
 const postStore = useAuthStore();
 const route = useRoute();
 const router = useRouter();
-// 日期格式化函數
+
 const formatDate = (date: string): string => {
   return new Date(date).toLocaleString('zh-TW', {
     year: 'numeric',
@@ -127,7 +218,34 @@ const formatDate = (date: string): string => {
   });
 };
 
-// 加載貼文數據
+const canEdit = computed(() => {
+  return postStore.userState.isAuthenticated && 
+         postStore.userState.user?.uid === post.value?.uid;
+});
+
+const post = computed(() => postStore.postState.post);
+const comments = computed(() => postStore.postState.comments);
+
+const sanitizedContent = computed(() => {
+  if (!post.value?.content) return '';
+  return DOMPurify.sanitize(post.value.content, {
+    ALLOWED_TAGS: [
+      'p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+      'ul', 'ol', 'li', 'a', 'img', 'table', 'tr', 'td', 'th', 'thead', 'tbody',
+      'div', 'span', 'pre', 'code', 'blockquote'
+    ],
+    ALLOWED_ATTR: ['href', 'target', 'src', 'alt', 'class', 'style', 'width', 'height']
+  });
+});
+
+const onCollapse = (isCollapsed: boolean, type: string) => {
+  collapsed.value = isCollapsed;
+};
+
+const handleEditorClick = (e: any) => {
+  console.log('Editor clicked:', e);
+};
+
 const loadPostData = async (postId: string) => {
   loading.value = true;
   try {
@@ -142,10 +260,64 @@ const loadPostData = async (postId: string) => {
     loading.value = false;
   }
 };
-const goToUserProfile = (id) => {
-  router.push({ name: 'userprofile', params: { id: id } });
+
+const goToUserProfile = (id: string) => {
+  router.push({ name: 'userprofile', params: { id } });
 };
-// 處理評論提交
+
+const showEditModal = () => {
+  if (!canEdit.value) {
+    message.warning('您沒有權限編輯此貼文');
+    return;
+  }
+  
+  nextTick(() => {
+    editForm.title = post.value.title;
+    editForm.content = post.value.content || '';
+    editModalVisible.value = true;
+  });
+};
+
+const handleEditCancel = () => {
+  editModalVisible.value = false;
+  editForm.title = '';
+  editForm.content = '';
+};
+
+const handleEditSubmit = async () => {
+  if (!editForm.title.trim() || !editForm.content.trim()) {
+    message.error('標題和內容不能為空');
+    return;
+  }
+
+  editSubmitting.value = true;
+  try {
+    const sanitizedContent = DOMPurify.sanitize(editForm.content, {
+      ALLOWED_TAGS: [
+        'p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+        'ul', 'ol', 'li', 'a', 'img', 'table', 'tr', 'td', 'th', 'thead', 'tbody',
+        'div', 'span', 'pre', 'code', 'blockquote'
+      ],
+      ALLOWED_ATTR: ['href', 'target', 'src', 'alt', 'class', 'style', 'width', 'height']
+    });
+
+    const response = await axios.put(`http://localhost:8000/api/post/update/${route.params.id}`, {
+      title: editForm.title,
+      content: sanitizedContent,
+    });
+
+    if (response.status === 200) {
+      message.success('貼文更新成功');
+      editModalVisible.value = false;
+      await loadPostData(route.params.id as string);
+    }
+  } catch (error: any) {
+    message.error(error.response?.data?.error || '更新貼文失敗');
+  } finally {
+    editSubmitting.value = false;
+  }
+};
+
 const handleCommentSubmit = async () => {
   if (!postStore.userState.isAuthenticated) {
     message.warning('請先登入後再發表評論');
@@ -164,8 +336,9 @@ const handleCommentSubmit = async () => {
 
     if (response.status === 201) {
       message.success('評論發表成功');
-      commentForm.content = ''; // 清空評論框
-      await postStore.getAllComments(route.params.id as string); // 重新加載評論
+      commentForm.title = '';
+      commentForm.content = '';
+      await postStore.getAllComments(route.params.id as string);
     }
   } catch (error: any) {
     message.error(error.response?.data?.error || '評論發表失敗');
@@ -174,11 +347,6 @@ const handleCommentSubmit = async () => {
   }
 };
 
-// 計算屬性用來訪問 store 中的貼文和留言數據
-const post = computed(() => postStore.postState.post);
-const comments = computed(() => postStore.postState.comments);
-
-// 當組件掛載時，根據路由參數查詢貼文資訊
 onMounted(async () => {
   const postId = route.params.id as string;
   if (postId) {
@@ -229,9 +397,9 @@ onMounted(async () => {
   font-size: 16px;
   line-height: 1.8;
   margin-top: 24px;
-  word-wrap: break-word; /* 让长单词或连续字符自动换行 */
-  word-break: break-word; /* 强制换行，适用于多种语言 */
-  white-space: normal; /* 确保文字正常换行，而不是保留空格或强制单行显示 */
+  word-wrap: break-word;
+  word-break: break-word;
+  white-space: normal;
 }
 
 .comment-form {
@@ -283,9 +451,19 @@ onMounted(async () => {
 
 .avatar {
   cursor: pointer;
-  /* 指定指標為手形 */
 }
 
 .avatar:hover {
-  transform: scale(1.02);}
+  transform: scale(1.02);
+}
+
+.edit-icon {
+  cursor: pointer;
+  color: #1890ff;
+  margin-left: 8px;
+}
+
+.edit-icon:hover {
+  color: #40a9ff;
+}
 </style>

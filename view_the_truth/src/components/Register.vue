@@ -48,7 +48,10 @@
                             </template>
                         </a-input>
                     </a-form-item>
-
+                    <a-form-item label="驗證碼" name="check">
+                        <a-input v-model:value="formState.email" placeholder="請輸入驗證碼">
+                        </a-input>
+                    </a-form-item>
                     <a-form-item :wrapper-col="{ span: 14, offset: 4 }">
                         <a-space>
                             <a-button type="primary" :loading="loading" @click="onSubmit">

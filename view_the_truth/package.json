@@ -11,11 +11,15 @@
   "dependencies": {
     "@ant-design/icons-vue": "^7.0.1",
     "@opentiny/vue": "^3.20.0",
+    "@tinymce/tinymce-vue": "^4.0.7",
+    "@types/dompurify": "^3.0.5",
     "ant-design-vue": "^4.2.5",
     "axios": "^1.7.7",
     "date-fns": "^4.1.0",
+    "dompurify": "^3.2.4",
     "element-plus": "^2.8.4",
     "pinia": "^2.2.2",
+    "tinymce": "^7.6.1",
     "vue": "^3.4.37",
     "vue-router": "^4.4.5",
     "vuetify": "^3.7.6"

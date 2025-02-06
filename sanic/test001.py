@@ -450,6 +450,7 @@ async def get_all_comment(request, pid):
     except Exception as e:
         print(f"Error in get_all_comments: {str(e)}")
         return json({"error": str(e)}, status=400)
+    
 @app.get("/api/ncomment/<nid>")
 async def get_all_ncomment(request, nid):
     """獲取所有貼文留言信息的 API"""
@@ -546,7 +547,39 @@ async def get_news_info(request, nid):
         print(f"Error in get_news_info: {str(e)}")  # 打印错误日志
         return json({"error": str(e)}, status=400)
 
+@app.put("/api/post/update/<pid>")
+async def post_comment_update(request, pid):
+    try:
+        data = request.json
+        required_fields = ["title", "content"]
+        if not all(key in data for key in required_fields):
+            return json({"error": "缺少必要欄位"}, status=400)
 
+        async with app.ctx.pool.acquire() as conn:
+            async with conn.cursor() as cur:
+                # 先檢查貼文是否存在
+                await cur.execute(
+                    "SELECT COUNT(*) FROM post WHERE pid = %s",
+                    (pid,)
+                )
+                result = await cur.fetchone()
+                if result[0] == 0:
+                    return json({"error": "找不到該貼文"}, status=404)
+
+                # 更新貼文內容
+                await cur.execute(
+                    """
+                    UPDATE post
+                    SET title = %s, content = %s 
+                    WHERE pid = %s
+                    """,
+                    (data["title"], data["content"], pid)
+                )
+
+        return json({"message": "貼文更新成功"}, status=200)
+
+    except Exception as e:
+        return json({"error": f"服務器錯誤: {str(e)}"}, status=500)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000)

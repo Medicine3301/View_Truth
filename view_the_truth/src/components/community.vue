@@ -53,8 +53,8 @@
           <a-form-item name="title" :rules="[{ required: true, message: '請輸入文章標題！' }]">
             <a-input v-model:value="postForm.title" placeholder="文章標題" />
           </a-form-item>
-          <tiny-fluent-editor v-model="value" :data-type="false" :data-upgrade="false" />
-          內容:{{value}}
+          <tiny-fluent-editor :modelValue="value" @update:modelValue="value = $event" :data-type="false"
+            :data-upgrade="false" :language="'zh-TW'" />
           <div style="display: flex; justify-content: center; gap: 16px;">
             <a-button type="primary" html-type="submit" :loading="postLoading">
               發表
@@ -84,7 +84,7 @@ import { MessageOutlined } from '@ant-design/icons-vue'
 import axios from 'axios'
 import { TinyFluentEditor } from '@opentiny/vue'
 
-const value=ref('')
+const value = ref('')
 // 基本狀態
 const collapsed = ref(false)
 const loading = ref(true)
@@ -322,5 +322,4 @@ onMounted(async () => {
   font-size: 14px;
   color: #666;
 }
-
 </style>

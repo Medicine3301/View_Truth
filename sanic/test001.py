@@ -19,7 +19,7 @@ DB_CONFIG = {
     "password": "123456",
     "db": "new_community",
     "charset": "utf8mb4",
-    "port": 3305
+    "port": 3306
 }
 
 
@@ -118,7 +118,7 @@ async def post_comment_add(request):
         return json({"error": f"服務器錯誤: {str(e)}"}, status=500)
 
 @app.post("/api/news/comment/create")
-async def post_comment_add(request):
+async def news_comment_add(request):
     try:
         data = request.json
         required_fields = ["nid", "title", "uid", "una", "content"]
@@ -135,7 +135,7 @@ async def post_comment_add(request):
                     INSERT INTO comments (nid, title, comm_id, uid, una, content)
                     VALUES (%s, %s, %s, %s, %s, %s)
                     """,
-                    (data["pid"], data["title"], next_id, 
+                    (data["nid"], data["title"], next_id, 
                      data["uid"], data["una"], data["content"])
                 )
                 
@@ -457,7 +457,7 @@ async def get_all_ncomment(request, nid):
         async with app.ctx.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 await cur.execute(
-                    "SELECT pid,uid,una,comm_id,nid,title,content,crea_date FROM comments where nid=%s",
+                    "SELECT uid,una,comm_id,nid,title,content,crea_date FROM comments where nid=%s",
                     (nid,),
                 ),
                 comments = await cur.fetchall()
@@ -466,7 +466,6 @@ async def get_all_ncomment(request, nid):
                 # 處理每個留言的數據
                 response = [
                     {
-                        "pid": comment["pid"],
                         "uid": comment["uid"],
                         "una": comment["una"],
                         "comm_id": comment["comm_id"],

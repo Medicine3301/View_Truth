@@ -18,7 +18,7 @@
                     <span class="post-time">{{ formatDate(post.crea_date) }}</span>
                     <!--評分模組-->
                     <a-rate v-model:value="value" />
-                    
+                    <FormOutlined />
                   </div>
                 </div>
               </template>
@@ -88,6 +88,7 @@ import Sidebar from '../layout/sidebar.vue';
 import Header from '../layout/header.vue';
 import axios from 'axios';
 import { message, notification } from 'ant-design-vue';
+import { TinyFluentEditor } from '@opentiny/vue'
 const value = ref<number>(2);
 // 側邊欄狀態管理
 const collapsed = ref<boolean>(false);

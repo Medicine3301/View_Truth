@@ -395,7 +395,7 @@ export const useAuthStore = defineStore('auth', {
             try {
                 const response = await axios.get(`http://localhost:8000/api/ncomment/${nid}`);
                 if (response.status === 200) {
-                    this.postState.comments = response.data.comments as comment[];
+                    this.newstate.comments = response.data.comments as comment[];
                 } else {
                     notification.error({
                         message: '沒有找到任何留言',

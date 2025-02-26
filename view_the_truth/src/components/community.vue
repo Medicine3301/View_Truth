@@ -55,9 +55,9 @@
           </a-form-item>
           <a-form-item name="content" :rules="[{ required: true, message: '請輸入文章內容！' }]">
             <Editor
-              v-model="value"
+              v-model="postForm.content"
               :init="editorConfig"
-              api-key="your-tinymce-api-key"
+              api-key="ci5pu95qkbehxg0n46696e18lgou1726k31jwvfad8hgz6f2"
             />
           </a-form-item>
           <div style="display: flex; justify-content: center; gap: 16px;">
@@ -106,7 +106,8 @@ const posts = computed(() => authStore.postState.posts)
 const postModalVisible = ref(false)
 const postLoading = ref(false)
 const postForm = reactive({
-  title: ''
+  title: '',
+  content:''
 })
 
 // TinyMCE 編輯器配置
@@ -242,7 +243,7 @@ const handlePostSubmit = async () => {
       cid: route.params.id,
       uid: authStore.userState.user?.uid,
       una: authStore.userState.user?.una,
-      content: value.value
+      content: postForm.content
     })
 
     if (response.status === 201) {

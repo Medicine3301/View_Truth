@@ -135,7 +135,6 @@ import { FormOutlined } from '@ant-design/icons-vue';
 import DOMPurify from 'dompurify';
 import Editor from '@tinymce/tinymce-vue';
 
-const textvalue = ref('');
 const value = ref<number>(2);
 const collapsed = ref<boolean>(false);
 const broken = ref<boolean>(false);
@@ -188,7 +187,9 @@ const editorConfig = {
       const response = await axios.post('http://localhost:8000/api/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (e) => {
-          progress(e.loaded / e.total * 100);
+          if (e.total) {
+            progress(e.loaded / e.total * 100);
+          }
         }
       });
       
@@ -272,8 +273,10 @@ const showEditModal = () => {
   }
   
   nextTick(() => {
-    editForm.title = post.value.title;
-    editForm.content = post.value.content || '';
+    if (post.value) {
+      editForm.title = post.value.title;
+      editForm.content = post.value.content || '';
+    }
     editModalVisible.value = true;
   });
 };

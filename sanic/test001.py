@@ -19,14 +19,14 @@ DB_CONFIG = {
     "password": "123456",
     "db": "new_community",
     "charset": "utf8mb4",
-    "port": 3306
+    "port": 3305
 }
 
 
 @app.listener("before_server_start")
 #set db
 async def setup_db(app, loop):
-    app.ctx.pool = await aiomysql.create_pool(**DB_CONFIG, loop=loop, autocommit=True)
+    app.ctx.pool = await aiomysql.create_pool(**DB_CONFIG, loop=loop, autocommit=True,maxsize=10 )
 #輔助程式-抓用戶資料
 async def get_user_by_username(pool, username):
     async with pool.acquire() as conn:

@@ -53,8 +53,13 @@
           <a-form-item name="title" :rules="[{ required: true, message: '請輸入文章標題！' }]">
             <a-input v-model:value="postForm.title" placeholder="文章標題" />
           </a-form-item>
-          <tiny-fluent-editor :modelValue="value" @update:modelValue="value = $event" :data-type="false"
-            :data-upgrade="false" :language="'zh-TW'" />
+          <a-form-item name="content" :rules="[{ required: true, message: '請輸入文章內容！' }]">
+            <Editor
+              v-model="value"
+              :init="editorConfig"
+              api-key="your-tinymce-api-key"
+            />
+          </a-form-item>
           <div style="display: flex; justify-content: center; gap: 16px;">
             <a-button type="primary" html-type="submit" :loading="postLoading">
               發表
@@ -82,7 +87,7 @@ import Header from '../layout/header.vue'
 import { message } from 'ant-design-vue'
 import { MessageOutlined } from '@ant-design/icons-vue'
 import axios from 'axios'
-import { TinyFluentEditor } from '@opentiny/vue'
+import Editor from '@tinymce/tinymce-vue'
 
 const value = ref('')
 // 基本狀態
@@ -103,6 +108,52 @@ const postLoading = ref(false)
 const postForm = reactive({
   title: ''
 })
+
+// TinyMCE 編輯器配置
+const editorConfig = {
+  height: 500,
+  menubar: true,
+  plugins: [
+    'advlist', 'autolink', 'lists', 'link', 'image', 'charmap',
+    'preview', 'anchor', 'searchreplace', 'visualblocks', 'code',
+    'fullscreen', 'insertdatetime', 'media', 'table', 'paste',
+    'code', 'help', 'wordcount'
+  ],
+  toolbar: 'undo redo | formatselect | ' +
+    'bold italic backcolor | alignleft aligncenter ' +
+    'alignright alignjustify | bullist numlist outdent indent | ' +
+    'removeformat | help',
+  content_style: `
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; font-size: 14px; }
+    img { max-width: 100%; height: auto; }
+  `,
+  language: 'zh_TW',
+  branding: false,
+  elementpath: false,
+  convert_urls: false,
+  relative_urls: false,
+  paste_data_images: true,
+  images_upload_handler: async (blobInfo: any, progress: any) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', blobInfo.blob(), blobInfo.filename());
+      
+      const response = await axios.post('http://localhost:8000/api/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (e) => {
+          if (e.total) {
+            progress(e.loaded / e.total * 100);
+          }
+        }
+      });
+      
+      return response.data.url;
+    } catch (error) {
+      console.error('Image upload failed:', error);
+      throw new Error('圖片上傳失敗');
+    }
+  }
+};
 
 // 日期格式化
 const formatDate = (date: string): string => {

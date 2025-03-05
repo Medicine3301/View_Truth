@@ -73,7 +73,7 @@ async def get_latest_post_id(pool):
 async def register(request):
     try:
         data = request.json
-        if not all(key in data for key in ["name", "email", "password", "sex", "birthday"]):
+        if not all(key in data for key in ["name", "email", "password", "sex", "birthday","verificationCode"]):
             return json({"error": "缺少必要欄位"}, status=400)
 
         existing_user = await get_user_by_username(app.ctx.pool, data["name"])

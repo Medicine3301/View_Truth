@@ -6,7 +6,24 @@ import jwt
 import bcrypt
 import uuid
 from datetime import datetime, timedelta
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from back.mail import EmailVerifier
+
+def sendvcode(semail):
+    # 初始化驗證器（請替換為您的SMTP服務器信息）
+    verifier = EmailVerifier(
+        smtp_server="smtp.gmail.com",
+        smtp_port=587,
+        sender_email="acr3214@gmail.com",
+        sender_password="opvb zvru aarc oqqn"
+    )
+   
+    # 發送驗證郵件
+    email = semail
+    success, message = verifier.send_verification_email(email)
 
 app = Sanic("auth_app")
 CORS(app)
@@ -85,7 +102,20 @@ async def register(request):
         return json({"error": f"資料格式錯誤: {str(e)}"}, status=400)
     except Exception as e:
         return json({"error": f"服務器錯誤: {str(e)}"}, status=500)
+#驗證碼傳送
+@app.post("/api/send_verification_code")
+async def send_verification_code(request):
+    try:
+        data = request.json
+        if "email" not in data:
+            return json({"error": "缺少必要欄位"}, status=400)
+        #根據email發送驗證碼
+        sendvcode(data.get("email"))
 
+        return json({"message": "驗證碼已發送"}, status=200)
+
+    except Exception as e:
+        return json({"error": f"服務器錯誤: {str(e)}"}, status=500)
 @app.post("/api/post/comment/create")
 async def post_comment_add(request):
     try:

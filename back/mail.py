@@ -106,29 +106,6 @@ class EmailVerifier:
         return True, "驗證成功"
 
 
-# 使用示例
-def main():
-    # 初始化驗證器（請替換為您的SMTP服務器信息）
-    verifier = EmailVerifier(
-        smtp_server="smtp.gmail.com",
-        smtp_port=587,
-        sender_email="acr3214@gmail.com",
-        sender_password="opvb zvru aarc oqqn"
-    )
-   
-    # 發送驗證郵件
-    email = "acr3214@gmail.com"
-    success, message = verifier.send_verification_email(email)
-    print(f"發送結果: {message}")
-   
-    if success:
-        # 模擬用戶輸入驗證碼
-        verification_code = input("請輸入收到的驗證碼: ")
-       
-        # 驗證
-        success, message = verifier.verify_code(email, verification_code)
-        print(f"驗證結果: {message}")
 
 
-if __name__ == "__main__":
-    main()
+

@@ -19,7 +19,7 @@ DB_CONFIG = {
     "password": "123456",
     "db": "new_community",
     "charset": "utf8mb4",
-    "port": 3305
+    "port": 3306
 }
 
 

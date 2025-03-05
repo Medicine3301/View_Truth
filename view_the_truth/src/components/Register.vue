@@ -47,6 +47,9 @@
                                 <MailOutlined />
                             </template>
                         </a-input>
+                        <a-button @click="sendVerificationCode" style="width: 30%">
+                            傳送驗證碼
+                        </a-button>
                     </a-form-item>
                     <a-form-item label="驗證碼" name="check">
                         <a-input v-model:value="formState.email" placeholder="請輸入驗證碼">
@@ -79,6 +82,7 @@ import type { UnwrapRef } from 'vue';
 import type { Rule } from 'ant-design-vue/es/form';
 import { UserOutlined, LockOutlined, MailOutlined } from '@ant-design/icons-vue';
 import { useAuthStore } from '../stores/auth';
+import axios from 'axios'; // 添加 axios 用於發送請求
 
 interface FormState {
     name: string;
@@ -87,6 +91,7 @@ interface FormState {
     passwd: string;
     checkPasswd: string;
     email: string;
+    verificationCode: string;
 }
 
 const router = useRouter();
@@ -104,6 +109,7 @@ const formState: UnwrapRef<FormState> = reactive({
     passwd: '',
     checkPasswd: '',
     email: '',
+    verificationCode:'',
 });
 
 // 禁用未來日期
@@ -180,6 +186,19 @@ const rules: Record<string, Rule[]> = {
     ],
 };
 
+// 新增的函數，用於發送驗證碼
+const sendVerificationCode = async () => {
+    try {
+        const response = await axios.post('/api/send_verification_code', { email: formState.email });
+        if (response.data.success) {
+            alert('驗證碼已發送');
+        } else {
+            alert('發送驗證碼失敗');
+        }
+    } catch (error) {
+        alert('發送驗證碼時出錯');
+    }
+};
 
 const onSubmit = async () => {
     try {

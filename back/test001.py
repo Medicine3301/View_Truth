@@ -12,18 +12,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from back.mail import EmailVerifier
 
-def sendvcode(semail):
-    # 初始化驗證器（請替換為您的SMTP服務器信息）
-    verifier = EmailVerifier(
-        smtp_server="smtp.gmail.com",
-        smtp_port=587,
-        sender_email="acr3214@gmail.com",
-        sender_password="opvb zvru aarc oqqn"
-    )
-   
-    # 發送驗證郵件
-    email = semail
-    success, message = verifier.send_verification_email(email)
+
 
 app = Sanic("auth_app")
 CORS(app)
@@ -69,13 +58,29 @@ async def get_latest_ncomm_id(pool):
 async def get_latest_post_id(pool):
     return await get_latest_id(pool, "post", "pid", "P")
 
+# 在 register 路由中加入驗證碼驗證
 @app.post("/api/register")
 async def register(request):
     try:
         data = request.json
-        if not all(key in data for key in ["name", "email", "password", "sex", "birthday","verificationCode"]):
+        if not all(key in data for key in ["name", "email", "password", "sex", "birthday", "verificationCode"]):
             return json({"error": "缺少必要欄位"}, status=400)
 
+        # 驗證驗證碼
+        email = data["email"]
+        verification_code = data["verificationCode"]
+        verifier = EmailVerifier(
+            smtp_server="smtp.gmail.com",
+            smtp_port=587,
+            sender_email="acr3214@gmail.com",
+            sender_password="opvb zvru aarc oqqn"
+        )
+        
+        success, message = verifier.verify_code(email, verification_code)
+        if not success:
+            return json({"error": message}, status=400)
+
+        # 如果驗證成功，繼續註冊流程
         existing_user = await get_user_by_username(app.ctx.pool, data["name"])
         if existing_user:
             return json({"error": "用戶名已存在"}, status=400)
@@ -102,20 +107,41 @@ async def register(request):
         return json({"error": f"資料格式錯誤: {str(e)}"}, status=400)
     except Exception as e:
         return json({"error": f"服務器錯誤: {str(e)}"}, status=500)
-#驗證碼傳送
+
+# 修改發送驗證碼的函數
 @app.post("/api/send_verification_code")
 async def send_verification_code(request):
     try:
         data = request.json
         if "email" not in data:
             return json({"error": "缺少必要欄位"}, status=400)
-        #根據email發送驗證碼
-        sendvcode(data.get("email"))
+        
+        # 檢查郵箱是否已經註冊
+        async with app.ctx.pool.acquire() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute("SELECT COUNT(*) FROM users WHERE email = %s", (data["email"],))
+                result = await cur.fetchone()
+                if result[0] > 0:
+                    return json({"error": "此郵箱已被註冊"}, status=400)
 
-        return json({"message": "驗證碼已發送"}, status=200)
+        # 發送驗證碼
+        verifier = EmailVerifier(
+            smtp_server="smtp.gmail.com",
+            smtp_port=587,
+            sender_email="acr3214@gmail.com",
+            sender_password="opvb zvru aarc oqqn"
+        )
+        
+        success, message = verifier.send_verification_email(data["email"])
+        
+        if success:
+            return json({"message": "驗證碼已發送"}, status=200)
+        else:
+            return json({"error": message}, status=400)
 
     except Exception as e:
         return json({"error": f"服務器錯誤: {str(e)}"}, status=500)
+
 @app.post("/api/post/comment/create")
 async def post_comment_add(request):
     try:

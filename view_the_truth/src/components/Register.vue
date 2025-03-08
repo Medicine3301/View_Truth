@@ -5,7 +5,7 @@
             <div class="form-container">
                 <a-form ref="formRef" :model="formState" :rules="rules" :label-col="labelCol" :wrapper-col="wrapperCol">
                     <a-form-item ref="name" label="用戶名稱" name="name">
-                        <a-input v-model:value="formState.name" placeholder="請輸入3-5個字的用戶名">
+                        <a-input v-model:value="formState.name" placeholder="請輸入3-12個字的用戶名">
                             <template #prefix>
                                 <UserOutlined />
                             </template>
@@ -94,6 +94,7 @@ interface FormState {
     verificationCode: string;
 }
 
+
 const router = useRouter();
 const authStore = useAuthStore();
 const formRef = ref();
@@ -167,7 +168,7 @@ const validateEmail = async (_rule: Rule, value: string) => {
 const rules: Record<string, Rule[]> = {
     name: [
         { required: true, message: '請輸入用戶名稱', trigger: 'change' },
-        { min: 3, max: 6, message: '長度必須為3-12個字', trigger: 'blur' },
+        { min: 3, max: 12, message: '長度必須為3-12個字', trigger: 'blur' },
     ],
     birthday: [
         { required: true, message: '請選擇生日日期', trigger: 'change', type: 'object' }
@@ -218,6 +219,7 @@ const onSubmit = async () => {
             password: formState.passwd,
             sex: formState.sex,
             birthday: birthdayDate,  // 直接傳遞 Date 類型
+            verificationCode: formState.verificationCode,
         });
 
         if (success) {

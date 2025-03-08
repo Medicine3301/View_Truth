@@ -87,6 +87,7 @@ interface RegisterUserData {
     password: string
     sex: string
     birthday: Date
+    verificationCode: string
 }
 
 // 狀態管理

@@ -10,6 +10,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+#郵件認證的函式導入
 from back.mail import EmailVerifier
 
 
@@ -25,7 +26,7 @@ DB_CONFIG = {
     "password": "123456",
     "db": "new_community",
     "charset": "utf8mb4",
-    "port": 3306
+    "port": 3305
 }
 
 

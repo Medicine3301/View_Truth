@@ -174,37 +174,82 @@ async def post_comment_add(request):
     except Exception as e:
         return json({"error": f"服務器錯誤: {str(e)}"}, status=500)
 
-@app.post("/api/news/comment/create")
-async def news_comment_add(request):
+#收藏新增
+@app.post("/api/favorites/add")
+async def favorite_add(request):
     try:
         data = request.json
-        required_fields = ["nid", "title", "uid", "una", "content"]
+        required_fields = ["pid","uid"]
         if not all(key in data for key in required_fields):
             return json({"error": "缺少必要欄位"}, status=400)
-
-        latest_id = await get_latest_ncomm_id(app.ctx.pool)
-        next_id = f"RN{latest_id + 1}"
 
         async with app.ctx.pool.acquire() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(
                     """
-                    INSERT INTO comments (nid, title, comm_id, uid, una, content)
-                    VALUES (%s, %s, %s, %s, %s, %s)
+                    INSERT INTO collect (pid, uid)
+                    VALUES (%s, %s)
                     """,
-                    (data["nid"], data["title"], next_id, 
-                     data["uid"], data["una"], data["content"])
-                )
-                
+                    (data["pid"],data["uid"]) )
 
         return json({
-            "message": "留言成功",
-            "comm_id": next_id
+            "message": "收藏成功",
         }, status=201)
 
     except Exception as e:
         return json({"error": f"服務器錯誤: {str(e)}"}, status=500)
+  #收藏刪除  
+@app.delete("/api/favorites/remove")
+async def favorite_delete(request):
+    try:
+        data = request.json
+        required_fields = ["pid","uid"]
+        if not all(key in data for key in required_fields):
+            return json({"error": "缺少必要欄位"}, status=400)
 
+        async with app.ctx.pool.acquire() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(
+                    """
+                    DELETE FROM collect WHERE pid = %s AND uid = %s
+                    """,
+                    (data["pid"],data["uid"]) )
+
+        return json({
+            "message": "刪除成功",
+        }, status=201)
+
+    except Exception as e:
+        return json({"error": f"服務器錯誤: {str(e)}"}, status=500)
+    #收藏查詢
+@app.post("/api/favorites/get/")
+async def get_favorites(request):
+    try:
+        data = request.json
+        if not data:
+            return json({"error": "請求體為空"}, status=400)
+
+        required_fields = ["pid", "uid"]
+        if not all(key in data for key in required_fields):
+            return json({"error": "缺少必要欄位"}, status=400)
+
+        async with app.ctx.pool.acquire() as conn:
+            async with conn.cursor() as cur:
+                # 查詢收藏狀態
+                await cur.execute(
+                    """
+                    SELECT COUNT(*) FROM collect WHERE pid = %s AND uid = %s
+                    """,
+                    (data["pid"], data["uid"])
+                )
+                result = await cur.fetchone()
+                is_favorited = result[0] > 0
+
+        return json({"isFavorited": is_favorited}, status=200)
+
+    except Exception as e:
+        return json({"error": f"服務器錯誤: {str(e)}"}, status=500)
+   
 @app.post("/api/post/post/create")
 async def post_add(request):
     try:

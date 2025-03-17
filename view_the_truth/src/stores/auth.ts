@@ -325,6 +325,23 @@ export const useAuthStore = defineStore('auth', {
                 });
             }
         },
+        async checkFavorite(pid: string, uid: string): Promise<boolean> {
+            try {
+                const response = await axios.post('http://localhost:8000/api/favorites/get/', {
+                    pid,
+                    uid,
+                });
+                if (response.status === 200) {
+                    return true;
+                } else {
+                    return false;
+                }
+            } catch (error: any) {
+                console.error('獲取收藏狀態失敗:', error);
+                return false;
+            }
+        }
+        ,
         async getAllComments(pid: string) {
             try {
                 const response = await axios.get(`http://localhost:8000/api/comment/${pid}`);

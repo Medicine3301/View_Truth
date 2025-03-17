@@ -18,7 +18,11 @@
                     <span class="author-name">{{ post.una }}</span>
                     <span class="post-time">{{ formatDate(post.crea_date) }}</span>
                     <a-rate v-model:value="value" />
-                    <FormOutlined @click="showEditModal" v-if="canEdit" />
+                    <FormOutlined class="edit-icon" @click="showEditModal" v-if="canEdit" />
+                    <HeartOutlined
+                      :class="{ 'favorite-icon-active': isFavorited }"
+                      @click="toggleFavorite"
+                    />
                   </div>
                 </div>
               </template>
@@ -131,7 +135,7 @@ import Sidebar from '../layout/sidebar.vue';
 import Header from '../layout/header.vue';
 import axios from 'axios';
 import { message } from 'ant-design-vue';
-import { FormOutlined } from '@ant-design/icons-vue';
+import { FormOutlined, HeartOutlined } from '@ant-design/icons-vue';
 import DOMPurify from 'dompurify';
 import Editor from '@tinymce/tinymce-vue';
 
@@ -350,11 +354,49 @@ const handleCommentSubmit = async () => {
   }
 };
 
+//收藏
+const isFavorited = ref<boolean>(false);
+  
+const toggleFavorite = async () => {
+  if (!postStore.userState.isAuthenticated) {
+    message.warning('請先登入後再收藏');
+    return;
+  }
+  try {
+   
+    if (isFavorited.value) {
+      // 調用 API 新增收藏
+      await axios.post('http://localhost:8000/api/favorites/add', {
+        uid: postStore.userState.user?.uid,
+        pid: route.params.id,
+      });
+      message.success('已收藏');
+    } else {
+      // 調用 API 移除收藏
+      await axios.delete('http://localhost:8000/api/favorites/remove', {
+        data: {
+          uid: postStore.userState.user?.uid,
+          pid: route.params.id,
+       },
+      });
+      message.success('已取消收藏');
+    }
+  } catch (error: any) {
+    message.error(error.response?.data?.error || '操作失敗');
+    isFavorited.value = !isFavorited.value; // 恢復狀態
+  }
+};
 onMounted(async () => {
   const postId = route.params.id as string;
+  const uid= postStore.userState.user?.uid as string;
   if (postId) {
     await loadPostData(postId);
   }
+  // 檢查收藏狀態
+  if (postStore.userState.isAuthenticated) {
+      const checkFavorite = await postStore.checkFavorite(postId, uid);
+      isFavorited.value = checkFavorite ?? false;
+    }
 });
 </script>
 
@@ -460,13 +502,25 @@ onMounted(async () => {
   transform: scale(1.02);
 }
 
+.favorite-icon-active {
+  color: #ff4d4f;
+  cursor: pointer;
+  transition: color 0.3s ease, transform 0.3s ease; /* 添加平滑過渡效果 */
+}
+
+.favorite-icon-active:hover {
+  color: #ff7875;
+  transform: scale(1.1); /* 放大效果 */
+}
 .edit-icon {
   cursor: pointer;
   color: #1890ff;
   margin-left: 8px;
+  transition: color 0.3s ease, transform 0.3s ease; /* 添加平滑過渡效果 */
 }
 
 .edit-icon:hover {
-  color: #40a9ff;
+  color: #40a9ff; /* 改變顏色 */
+  transform: scale(1.1); /* 放大效果 */
 }
 </style>

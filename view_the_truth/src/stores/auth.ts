@@ -331,11 +331,14 @@ export const useAuthStore = defineStore('auth', {
                     pid,
                     uid,
                 });
-                if (response.status === 200) {
-                    return true;
-                } else {
-                    return false;
-                }
+                
+                console.log('獲取收藏狀態成功:', response.data);
+                
+                // 檢查 response.data 中的實際收藏狀態
+                // 根據你的 API 返回數據結構來判斷
+                // 例如：response.data.isFavorited 或 response.data.exists 等
+                return response.data.isFavorited || response.data.exists || false;
+                
             } catch (error: any) {
                 console.error('獲取收藏狀態失敗:', error);
                 return false;

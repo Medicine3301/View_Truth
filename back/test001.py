@@ -26,7 +26,7 @@ DB_CONFIG = {
     "password": "123456",
     "db": "new_community",
     "charset": "utf8mb4",
-    "port": 3305
+    "port": 3306
 }
 
 
@@ -222,7 +222,7 @@ async def favorite_delete(request):
     except Exception as e:
         return json({"error": f"服務器錯誤: {str(e)}"}, status=500)
     #收藏查詢
-@app.post("/api/favorites/get/")
+@app.post("/api/favorites/get")
 async def get_favorites(request):
     try:
         data = request.json

@@ -362,28 +362,28 @@ const toggleFavorite = async () => {
     message.warning('請先登入後再收藏');
     return;
   }
+  
   try {
-   
-    if (isFavorited.value) {
-      // 調用 API 新增收藏
+    if (!isFavorited.value) {  // 未收藏狀態，執行新增收藏
       await axios.post('http://localhost:8000/api/favorites/add', {
         uid: postStore.userState.user?.uid,
         pid: route.params.id,
       });
+      isFavorited.value = true;  // 更新狀態為已收藏
       message.success('已收藏');
-    } else {
-      // 調用 API 移除收藏
+    } else {  // 已收藏狀態，執行取消收藏
       await axios.delete('http://localhost:8000/api/favorites/remove', {
         data: {
           uid: postStore.userState.user?.uid,
           pid: route.params.id,
-       },
+        },
       });
+      isFavorited.value = false;  // 更新狀態為未收藏
       message.success('已取消收藏');
     }
   } catch (error: any) {
     message.error(error.response?.data?.error || '操作失敗');
-    isFavorited.value = !isFavorited.value; // 恢復狀態
+    // 保持狀態不變，因為操作失敗
   }
 };
 onMounted(async () => {
@@ -394,8 +394,8 @@ onMounted(async () => {
   }
   // 檢查收藏狀態
   if (postStore.userState.isAuthenticated) {
-      const checkFavorite = await postStore.checkFavorite(postId, uid);
-      isFavorited.value = checkFavorite ?? false;
+    const checkFavorite = await postStore.checkFavorite(postId, uid);
+    isFavorited.value = checkFavorite;
     }
 });
 </script>

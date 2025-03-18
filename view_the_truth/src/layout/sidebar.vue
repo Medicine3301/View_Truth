@@ -44,7 +44,7 @@
           <a-menu-item @click="goToCommunity(board.cid)">
             <a-avatar :size="30" style="margin-right: 10px;">
               <template #icon>
-                <img src="/public/img/unnamed.jpg" :alt="board.cna" />
+                <img src="/public/img/sidebar.png" :alt="board.cna" />
               </template>
             </a-avatar>
             <span class="nav-text">{{ board.cna }}</span>

@@ -345,6 +345,21 @@ export const useAuthStore = defineStore('auth', {
             }
         }
         ,
+        async checkScore(pid: string, uid: string): Promise<number> {
+            try {
+                const response = await axios.post('http://localhost:8000/api/scores/get/', {
+                    pid,
+                    uid,
+                });
+                console.log('獲取評分狀態成功:', response.data);
+        
+                // 確保返回評分值，如果後端返回的數據中有 score
+                return response.data.score || 0; // 如果沒有評分，返回默認值 0
+            } catch (error: any) {
+                console.error('獲取評分狀態失敗:', error);
+                return 0; // 發生錯誤時返回默認值 0
+            }
+        },
         async getAllComments(pid: string) {
             try {
                 const response = await axios.get(`http://localhost:8000/api/comment/${pid}`);

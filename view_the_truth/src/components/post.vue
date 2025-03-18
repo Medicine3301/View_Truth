@@ -17,12 +17,9 @@
                     </a-avatar>
                     <span class="author-name">{{ post.una }}</span>
                     <span class="post-time">{{ formatDate(post.crea_date) }}</span>
-                    <a-rate v-model:value="value" />
+                    <a-rate v-model:value="rate_sc" @click="Rate_sc_btn" />
                     <FormOutlined class="edit-icon" @click="showEditModal" v-if="canEdit" />
-                    <HeartOutlined
-                      :class="{ 'favorite-icon-active': isFavorited }"
-                      @click="toggleFavorite"
-                    />
+                    <HeartOutlined :class="{ 'favorite-icon-active': isFavorited }" @click="toggleFavorite" />
                   </div>
                 </div>
               </template>
@@ -30,33 +27,15 @@
             </a-card>
 
             <!-- 編輯貼文的彈窗 -->
-            <a-modal
-              v-model:visible="editModalVisible"
-              title="編輯貼文"
-              @ok="handleEditSubmit"
-              :confirmLoading="editSubmitting"
-              @cancel="handleEditCancel"
-              width="800px"
-            >
+            <a-modal v-model:visible="editModalVisible" title="編輯貼文" @ok="handleEditSubmit"
+              :confirmLoading="editSubmitting" @cancel="handleEditCancel" width="800px">
               <a-form :model="editForm" layout="vertical">
-                <a-form-item
-                  label="標題"
-                  name="title"
-                  :rules="[{ required: true, message: '請輸入標題' }]"
-                >
+                <a-form-item label="標題" name="title" :rules="[{ required: true, message: '請輸入標題' }]">
                   <a-input v-model:value="editForm.title" />
                 </a-form-item>
-                <a-form-item
-                  label="內容"
-                  name="content"
-                  :rules="[{ required: true, message: '請輸入內容' }]"
-                >
-                  <Editor
-                    v-model="editForm.content"
-                    :init="editorConfig"
-                    api-key="ci5pu95qkbehxg0n46696e18lgou1726k31jwvfad8hgz6f2"
-                    @onClick="handleEditorClick"
-                  />
+                <a-form-item label="內容" name="content" :rules="[{ required: true, message: '請輸入內容' }]">
+                  <Editor v-model="editForm.content" :init="editorConfig"
+                    api-key="ci5pu95qkbehxg0n46696e18lgou1726k31jwvfad8hgz6f2" @onClick="handleEditorClick" />
                 </a-form-item>
               </a-form>
             </a-modal>
@@ -66,28 +45,16 @@
               <div class="comment-form">
                 <a-form :model="commentForm" @finish="handleCommentSubmit">
                   <a-form-item name="title" :rules="[{ required: true, message: '請輸入標題' }]">
-                    <a-textarea
-                      v-model:value="commentForm.title"
-                      :rows="1"
-                      placeholder="寫下你的標題..."
-                      :disabled="!postStore.userState.isAuthenticated"
-                    />
+                    <a-textarea v-model:value="commentForm.title" :rows="1" placeholder="寫下你的標題..."
+                      :disabled="!postStore.userState.isAuthenticated" />
                   </a-form-item>
                   <a-form-item name="content" :rules="[{ required: true, message: '請輸入評論內容' }]">
-                    <a-textarea
-                      v-model:value="commentForm.content"
-                      :rows="4"
-                      placeholder="寫下你的評論..."
-                      :disabled="!postStore.userState.isAuthenticated"
-                    />
+                    <a-textarea v-model:value="commentForm.content" :rows="4" placeholder="寫下你的評論..."
+                      :disabled="!postStore.userState.isAuthenticated" />
                   </a-form-item>
                   <a-form-item>
-                    <a-button
-                      type="primary"
-                      html-type="submit"
-                      :loading="submitting"
-                      :disabled="!postStore.userState.isAuthenticated"
-                    >
+                    <a-button type="primary" html-type="submit" :loading="submitting"
+                      :disabled="!postStore.userState.isAuthenticated">
                       發表評論
                     </a-button>
                   </a-form-item>
@@ -134,12 +101,12 @@ import { useRoute, useRouter } from 'vue-router';
 import Sidebar from '../layout/sidebar.vue';
 import Header from '../layout/header.vue';
 import axios from 'axios';
-import { message } from 'ant-design-vue';
+import { message, Modal } from 'ant-design-vue';
 import { FormOutlined, HeartOutlined } from '@ant-design/icons-vue';
 import DOMPurify from 'dompurify';
 import Editor from '@tinymce/tinymce-vue';
 
-const value = ref<number>(2);
+
 const collapsed = ref<boolean>(false);
 const broken = ref<boolean>(false);
 const loading = ref<boolean>(true);
@@ -187,7 +154,7 @@ const editorConfig = {
     try {
       const formData = new FormData();
       formData.append('file', blobInfo.blob(), blobInfo.filename());
-      
+
       const response = await axios.post('http://localhost:8000/api/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (e) => {
@@ -196,7 +163,7 @@ const editorConfig = {
           }
         }
       });
-      
+
       return response.data.url;
     } catch (error) {
       console.error('Image upload failed:', error);
@@ -224,8 +191,8 @@ const formatDate = (date: string): string => {
 };
 
 const canEdit = computed(() => {
-  return postStore.userState.isAuthenticated && 
-         postStore.userState.user?.uid === post.value?.uid;
+  return postStore.userState.isAuthenticated &&
+    postStore.userState.user?.uid === post.value?.uid;
 });
 
 const post = computed(() => postStore.postState.post);
@@ -275,7 +242,7 @@ const showEditModal = () => {
     message.warning('您沒有權限編輯此貼文');
     return;
   }
-  
+
   nextTick(() => {
     if (post.value) {
       editForm.title = post.value.title;
@@ -353,16 +320,58 @@ const handleCommentSubmit = async () => {
     submitting.value = false;
   }
 };
+const rate_sc = ref<number>();
+//評分
+const Rate_sc_btn = async () => {
+  if (!postStore.userState.isAuthenticated) {
+    message.warning('請先登入後再評分');
+    return;
+  }
 
+  // 從後端檢查當前評分
+  const currentScore = await postStore.checkScore(route.params.id as string, postStore.userState.user?.uid as string);
+
+  // 如果選擇的評分為零分，或者與當前評分相同，則不執行任何操作
+  if (rate_sc.value === 0 || rate_sc.value === currentScore) {
+    message.info('您已經選擇了相同的評分');
+    rate_sc.value = currentScore; // 恢復為當前評分
+    return;
+  }
+
+  // 彈出確認框
+  Modal.confirm({
+    title: '確認評分',
+    content: `確定要將評分設為 ${rate_sc.value} 嗎？`,
+    okText: '確定',
+    cancelText: '取消',
+    onOk: async () => {
+      try {
+        // 發送評分請求
+        await axios.post('http://localhost:8000/api/score/add', {
+          uid: postStore.userState.user?.uid,
+          pid: route.params.id,
+          score: rate_sc.value,
+        });
+        message.success('評分成功');
+      } catch (error: any) {
+        message.error(error.response?.data?.error || '評分失敗');
+      }
+    },
+    onCancel: () => {
+      // 如果取消，將評分值恢復為當前評分
+      rate_sc.value = currentScore;
+    },
+  });
+};
 //收藏
 const isFavorited = ref<boolean>(false);
-  
+
 const toggleFavorite = async () => {
   if (!postStore.userState.isAuthenticated) {
     message.warning('請先登入後再收藏');
     return;
   }
-  
+
   try {
     if (!isFavorited.value) {  // 未收藏狀態，執行新增收藏
       await axios.post('http://localhost:8000/api/favorites/add', {
@@ -388,7 +397,7 @@ const toggleFavorite = async () => {
 };
 onMounted(async () => {
   const postId = route.params.id as string;
-  const uid= postStore.userState.user?.uid as string;
+  const uid = postStore.userState.user?.uid as string;
   if (postId) {
     await loadPostData(postId);
   }
@@ -396,7 +405,13 @@ onMounted(async () => {
   if (postStore.userState.isAuthenticated) {
     const checkFavorite = await postStore.checkFavorite(postId, uid);
     isFavorited.value = checkFavorite;
-    }
+  }
+  //檢查評分
+  if (postStore.userState.isAuthenticated) {
+    const checkScore = await postStore.checkScore(postId, uid);
+    rate_sc.value = checkScore;
+  }
+
 });
 </script>
 
@@ -505,22 +520,28 @@ onMounted(async () => {
 .favorite-icon-active {
   color: #ff4d4f;
   cursor: pointer;
-  transition: color 0.3s ease, transform 0.3s ease; /* 添加平滑過渡效果 */
+  transition: color 0.3s ease, transform 0.3s ease;
+  /* 添加平滑過渡效果 */
 }
 
 .favorite-icon-active:hover {
   color: #ff7875;
-  transform: scale(1.1); /* 放大效果 */
+  transform: scale(1.1);
+  /* 放大效果 */
 }
+
 .edit-icon {
   cursor: pointer;
   color: #1890ff;
   margin-left: 8px;
-  transition: color 0.3s ease, transform 0.3s ease; /* 添加平滑過渡效果 */
+  transition: color 0.3s ease, transform 0.3s ease;
+  /* 添加平滑過渡效果 */
 }
 
 .edit-icon:hover {
-  color: #40a9ff; /* 改變顏色 */
-  transform: scale(1.1); /* 放大效果 */
+  color: #40a9ff;
+  /* 改變顏色 */
+  transform: scale(1.1);
+  /* 放大效果 */
 }
 </style>

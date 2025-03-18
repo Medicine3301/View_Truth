@@ -26,7 +26,7 @@ DB_CONFIG = {
     "password": "123456",
     "db": "new_community",
     "charset": "utf8mb4",
-    "port": 3306
+    "port": 3305
 }
 
 
@@ -198,7 +198,7 @@ async def favorite_add(request):
 
     except Exception as e:
         return json({"error": f"服務器錯誤: {str(e)}"}, status=500)
-  #收藏刪除  
+#收藏刪除  
 @app.delete("/api/favorites/remove")
 async def favorite_delete(request):
     try:
@@ -221,7 +221,7 @@ async def favorite_delete(request):
 
     except Exception as e:
         return json({"error": f"服務器錯誤: {str(e)}"}, status=500)
-    #收藏查詢
+#收藏查詢
 @app.post("/api/favorites/get")
 async def get_favorites(request):
     try:
@@ -249,7 +249,82 @@ async def get_favorites(request):
 
     except Exception as e:
         return json({"error": f"服務器錯誤: {str(e)}"}, status=500)
-   
+#評分新增
+@app.post("/api/score/add")
+async def score_add(request):
+    try:
+        data = request.json
+        required_fields = ["pid", "uid", "score"]
+        if not all(key in data for key in required_fields):
+            return json({"error": "缺少必要欄位"}, status=400)
+
+        pid = data["pid"]
+        uid = data["uid"]
+        score = data["score"]
+
+        async with app.ctx.pool.acquire() as conn:
+            async with conn.cursor() as cur:
+                # 檢查是否已存在評分
+                await cur.execute(
+                    """
+                    SELECT COUNT(*) FROM score WHERE pid = %s AND uid = %s
+                    """,
+                    (pid, uid)
+                )
+                result = await cur.fetchone()
+                exists = result[0] > 0
+
+                if exists:
+                    # 更新評分
+                    await cur.execute(
+                        """
+                        UPDATE score SET rate_sc = %s WHERE pid = %s AND uid = %s
+                        """,
+                        (score, pid, uid)
+                    )
+                    return json({"message": "評分更新成功"}, status=200)
+                else:
+                    # 新增評分
+                    await cur.execute(
+                        """
+                        INSERT INTO score (pid, uid, rate_sc)
+                        VALUES (%s, %s, %s)
+                        """,
+                        (pid, uid, score)
+                    )
+                    return json({"message": "評分成功"}, status=201)
+
+    except Exception as e:
+        return json({"error": f"服務器錯誤: {str(e)}"}, status=500)
+#評分查詢
+@app.post("/api/scores/get")
+async def get_score(request):
+    try:
+        data = request.json
+        if not data:
+            return json({"error": "請求體為空"}, status=400)
+
+        required_fields = ["pid", "uid"]
+        if not all(key in data for key in required_fields):
+            return json({"error": "缺少必要欄位"}, status=400)
+
+        async with app.ctx.pool.acquire() as conn:
+            async with conn.cursor() as cur:
+                # 查詢評分
+                await cur.execute(
+                    """
+                    SELECT rate_sc FROM score WHERE pid = %s AND uid = %s
+                    """,
+                    (data["pid"], data["uid"])
+                )
+                result = await cur.fetchone()
+                score = result[0] if result else None
+
+        return json({"score": score}, status=200)
+
+    except Exception as e:
+        return json({"error": f"服務器錯誤: {str(e)}"}, status=500)
+              
 @app.post("/api/post/post/create")
 async def post_add(request):
     try:

@@ -126,7 +126,7 @@ const editForm = reactive({
   content: ''
 });
 
-// TinyMCE 編輯器配置
+// TinyMCE 编辑器配置 
 const editorConfig = {
   height: 500,
   menubar: true,
@@ -150,28 +150,41 @@ const editorConfig = {
   convert_urls: false,
   relative_urls: false,
   paste_data_images: true,
+  automatic_uploads: true,
+  images_reuse_filename: true,
+ // 限制图片类型
+  images_file_types: 'jpeg,jpg,png,gif,webp',
+ // 添加文件选择器按钮
+  file_picker_types: 'image',
   images_upload_handler: async (blobInfo: any, progress: any) => {
     try {
-      const formData = new FormData();
-      formData.append('file', blobInfo.blob(), blobInfo.filename());
+        const formData = new FormData();
+        formData.append('file', blobInfo.blob(), blobInfo.filename());
 
-      const response = await axios.post('http://localhost:8000/api/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        onUploadProgress: (e) => {
-          if (e.total) {
-            progress(e.loaded / e.total * 100);
-          }
-        }
-      });
+        const response = await axios.post('http://localhost:8000/api/upload', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+            onUploadProgress: (e) => {
+                if (e.total) {
+                    progress(e.loaded / e.total * 100);
+                }
+            }
+        });
 
-      return response.data.url;
+        return response.data.url; // 確保後端返回的 URL 是字符串
     } catch (error) {
-      console.error('Image upload failed:', error);
-      throw new Error('圖片上傳失敗');
+        console.error('Image upload failed:', error);
+        throw new Error('圖片上傳失敗');
     }
+},
+  setup: (editor: any) => {
+    editor.on('init', () => {
+      editor.setContent(editForm.content);
+    });
+    editor.on('input', () => {
+      editForm.content = editor.getContent();
+    });
   }
 };
-
 const layoutMargin = computed(() => {
   return collapsed.value ? '0px' : broken.value ? '200px' : '200px';
 });
@@ -200,14 +213,30 @@ const comments = computed(() => postStore.postState.comments);
 
 const sanitizedContent = computed(() => {
   if (!post.value?.content) return '';
-  return DOMPurify.sanitize(post.value.content, {
+  const cleanContent = DOMPurify.sanitize(post.value.content, {
     ALLOWED_TAGS: [
       'p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
       'ul', 'ol', 'li', 'a', 'img', 'table', 'tr', 'td', 'th', 'thead', 'tbody',
-      'div', 'span', 'pre', 'code', 'blockquote'
+      'div', 'span', 'pre', 'code', 'blockquote', 'iframe'
     ],
-    ALLOWED_ATTR: ['href', 'target', 'src', 'alt', 'class', 'style', 'width', 'height']
+    ALLOWED_ATTR: [
+      'href', 'target', 'src', 'alt', 'class', 'style', 'width', 'height', 
+      'frameborder', 'allow', 'allowfullscreen'
+    ]
   });
+
+  // 限制 iframe 的來源
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(cleanContent, 'text/html');
+  const iframes = doc.querySelectorAll('iframe');
+  iframes.forEach((iframe) => {
+    const src = iframe.getAttribute('src');
+    if (!src || !src.startsWith('https://www.youtube.com/embed/')) {
+      iframe.remove(); // 移除不符合條件的 iframe
+    }
+  });
+
+  return doc.body.innerHTML;
 });
 
 const onCollapse = (isCollapsed: boolean, type: string) => {
@@ -270,9 +299,12 @@ const handleEditSubmit = async () => {
       ALLOWED_TAGS: [
         'p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
         'ul', 'ol', 'li', 'a', 'img', 'table', 'tr', 'td', 'th', 'thead', 'tbody',
-        'div', 'span', 'pre', 'code', 'blockquote'
+        'div', 'span', 'pre', 'code', 'blockquote', 'iframe' // 確保允許 iframe
       ],
-      ALLOWED_ATTR: ['href', 'target', 'src', 'alt', 'class', 'style', 'width', 'height']
+      ALLOWED_ATTR: [
+        'href', 'target', 'src', 'alt', 'class', 'style', 'width', 'height', 
+        'frameborder', 'allow', 'allowfullscreen' // 確保允許 iframe 的屬性
+      ]
     });
 
     const response = await axios.put(`http://localhost:8000/api/post/update/${route.params.id}`, {

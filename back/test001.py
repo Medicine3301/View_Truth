@@ -1,3 +1,4 @@
+import base64
 from sanic import Sanic
 from sanic.response import json
 from sanic_cors import CORS
@@ -354,7 +355,134 @@ async def post_add(request):
 
     except Exception as e:
         return json({"error": f"服務器錯誤: {str(e)}"}, status=500)
-
+#圖片新增
+@app.post("/api/upload")
+async def upload_file(request):
+    try:
+        # 检查请求中是否包含文件
+        if not request.files or 'file' not in request.files:
+            return json({"error": "没有找到文件"}, status=400)
+        
+        # 获取文件对象 - 这里根据实际情况调整处理方式
+        file_data = request.files.get('file')
+        
+        # 调试信息
+        print(f"文件数据类型: {type(file_data)}")
+        print(f"文件数据内容: {file_data}")
+        
+        # 处理不同类型的文件数据
+        if isinstance(file_data, list):
+            # 如果是列表，获取第一个元素
+            if not file_data:
+                return json({"error": "文件列表为空"}, status=400)
+            file = file_data[0]
+            # 继续检查file的类型
+            print(f"列表中第一个文件类型: {type(file)}")
+        else:
+            file = file_data
+        
+        # 直接从请求中获取文件名
+        # 多种可能的方式获取文件名
+        filename = None
+        
+        # 尝试从Content-Disposition头获取
+        for key, value in request.headers.items():
+            if key.lower() == 'content-disposition':
+                parts = value.split(';')
+                for part in parts:
+                    if 'filename=' in part:
+                        filename = part.split('=')[1].strip('"\'')
+                        break
+        
+        # 如果头部没有文件名，尝试其他方法
+        if not filename:
+            if hasattr(file, 'name'):
+                filename = file.name
+            elif hasattr(file, 'filename'):
+                filename = file.filename
+            elif 'filename' in dir(file):
+                filename = file.filename
+            else:
+                # 生成随机文件名
+                filename = f"upload_{uuid.uuid4().hex}"
+                # 尝试根据MIME类型确定扩展名
+                content_type = request.headers.get('content-type', '')
+                if 'image/jpeg' in content_type:
+                    filename += '.jpg'
+                elif 'image/png' in content_type:
+                    filename += '.png'
+                elif 'image/gif' in content_type:
+                    filename += '.gif'
+                else:
+                    filename += '.bin'  # 默认二进制文件
+        
+        print(f"文件名: {filename}")
+        
+        # 获取文件内容
+        file_content = None
+        if hasattr(file, 'body'):
+            file_content = file.body
+        elif hasattr(file, 'read'):
+            file_content = await file.read()
+        elif isinstance(file, bytes):
+            file_content = file
+        elif isinstance(file, str):
+            # 如果是base64编码的字符串
+            if file.startswith('data:'):
+                # 解析base64
+                header, encoded = file.split(",", 1)
+                file_content = base64.b64decode(encoded)
+            else:
+                return json({"error": "无法处理字符串类型的文件数据"}, status=400)
+        else:
+            return json({"error": f"无法处理的文件类型: {type(file)}"}, status=400)
+        
+        if not file_content:
+            return json({"error": "无法获取文件内容"}, status=400)
+        
+        # 获取文件扩展名
+        file_ext = filename.split('.')[-1].lower() if '.' in filename else None
+        
+        # 如果没有扩展名，通过MIME类型尝试确定
+        if not file_ext:
+            content_type = request.headers.get('content-type', '')
+            if 'image/jpeg' in content_type:
+                file_ext = 'jpg'
+            elif 'image/png' in content_type:
+                file_ext = 'png'
+            elif 'image/gif' in content_type:
+                file_ext = 'gif'
+            else:
+                file_ext = 'bin'  # 默认二进制文件
+        
+        # 限制文件类型
+        allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+        if file_ext not in allowed_extensions:
+            return json({"error": f"不支持的文件类型: {file_ext}"}, status=400)
+        
+        # 创建保存文件的目录
+        upload_dir = os.path.join("static", "uploads")
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        # 生成唯一文件名
+        unique_filename = f"{uuid.uuid4().hex}.{file_ext}"
+        file_path = os.path.join(upload_dir, unique_filename)
+        
+        # 保存文件
+        with open(file_path, "wb") as f:
+            f.write(file_content)
+        
+        # 返回文件的URL
+        file_url = f"http://localhost:8000/static/uploads/{unique_filename}"
+        
+        return json({"location": file_url}, status=201)
+    
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"上传错误: {str(e)}")
+        return json({"error": f"服务器错误: {str(e)}"}, status=500)
+    
 # 登入路由
 @app.post("/api/login")
 async def login(request):

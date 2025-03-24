@@ -11,6 +11,22 @@
                 <a-avatar :size="104" :src="otherUser?.avatar" class="user-avatar">
                   {{ otherUser?.una.charAt(0).toUpperCase() }}
                 </a-avatar>
+                <!-- 新增圖片上傳功能 -->
+                <div class="upload-avatar">
+                  <a-upload
+                    v-model:file-list="fileList"
+                    action="http://localhost:8000/api/upload-avatar"
+                    list-type="picture-card"
+                    @preview="handlePreview"
+                    :show-upload-list="false"
+                    :before-upload="beforeUpload"
+                  >
+                    <div>
+                      <plus-outlined />
+                      <div style="margin-top: 8px">上傳頭像</div>
+                    </div>
+                  </a-upload>
+                </div>
               </div>
             </div>
           </template>
@@ -181,17 +197,24 @@
         </a-card>
       </a-col>
     </a-row>
+    <!-- 預覽模態框 -->
+    <a-modal :open="previewVisible" :title="previewTitle" :footer="null" @cancel="handleCancel">
+      <img alt="example" style="width: 100%" :src="previewImage" />
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted} from 'vue'
-import { useAuthStore } from '../stores/auth'
-import { useRoute ,useRouter} from 'vue-router'
-// 獲取 store 和 route 實例
-const authStore = useAuthStore()
-const route = useRoute()
-const router =useRouter()
+import { computed, ref, onMounted } from 'vue';
+import { message } from 'ant-design-vue';
+import { useAuthStore } from '../stores/auth';
+import { useRoute, useRouter } from 'vue-router';
+import axios from 'axios';
+
+const authStore = useAuthStore();
+const route = useRoute();
+const router = useRouter();
+
 
 // 定義活動列表數據
 const userActivities = ref([
@@ -309,6 +332,46 @@ const getRoleColor = (role?: string) => {
 const goTotop = () => {
     router.push("/");
 };
+
+// 圖片上傳相關邏輯
+const fileList = ref([])
+const previewVisible = ref(false)
+const previewImage = ref('')
+const previewTitle = ref('')
+
+const handlePreview = async (file: any) => {
+  if (!file.url && !file.preview) {
+    file.preview = await getBase64(file.originFileObj)
+  }
+  previewImage.value = file.url || file.preview
+  previewVisible.value = true
+  previewTitle.value = file.name || file.url.substring(file.url.lastIndexOf('/') + 1)
+}
+
+const handleCancel = () => {
+  previewVisible.value = false
+}
+
+const beforeUpload = (file: any) => {
+  const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png'
+  if (!isJpgOrPng) {
+    message.error('You can only upload JPG/PNG file!')
+  }
+  const isLt2M = file.size / 1024 / 1024 < 2
+  if (!isLt2M) {
+    message.error('Image must smaller than 2MB!')
+  }
+  return isJpgOrPng && isLt2M
+}
+
+const getBase64 = (file: any) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.readAsDataURL(file)
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = error => reject(error)
+  })
+}
 </script>
 
 <style scoped>
@@ -338,6 +401,34 @@ const goTotop = () => {
 .user-avatar {
   border: 4px solid #fff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.upload-avatar {
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+}
+
+.ant-upload-select-picture-card {
+  width: 104px;
+  height: 104px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ant-upload-select-picture-card:hover {
+  border-color: #1890ff;
+}
+
+.ant-upload-select-picture-card .ant-upload-text {
+  margin-top: 8px;
+  color: #666;
 }
 
 .user-name {

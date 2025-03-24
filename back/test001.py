@@ -27,10 +27,10 @@ DB_CONFIG = {
     "password": "123456",
     "db": "new_community",
     "charset": "utf8mb4",
-    "port": 3305
+    "port": 3306
 }
 
-
+app.static('/static', './static')
 @app.listener("before_server_start")
 #set db
 async def setup_db(app, loop):
@@ -325,7 +325,11 @@ async def get_score(request):
 
     except Exception as e:
         return json({"error": f"服務器錯誤: {str(e)}"}, status=500)
-              
+    
+#update avatar 
+
+       
+#post新增        
 @app.post("/api/post/post/create")
 async def post_add(request):
     try:
@@ -355,6 +359,7 @@ async def post_add(request):
 
     except Exception as e:
         return json({"error": f"服務器錯誤: {str(e)}"}, status=500)
+    
 #圖片新增
 @app.post("/api/upload")
 async def upload_file(request):

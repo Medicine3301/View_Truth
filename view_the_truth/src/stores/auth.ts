@@ -62,6 +62,8 @@ interface CommunityState {
 interface Poststate {
     post: post | null
     posts: post[] | null
+    favorite: post | null
+    favorites: post[] | null
     comment: comment | null
     comments: comment[] | null
 }
@@ -108,6 +110,8 @@ export const useAuthStore = defineStore('auth', {
         postState: {
             post: null,
             posts: null,
+            favorite: null,
+            favorites: null,
             comment: null,
             comments: null
         },
@@ -325,6 +329,27 @@ export const useAuthStore = defineStore('auth', {
                 });
             }
         },
+        //獲取該user貼文
+        async getuserPosts(uid: string) {
+            try {
+                const response = await axios.get(`http://localhost:8000/api/userpost/${uid}`);
+                if (response.status === 200) {
+                    this.postState.posts = response.data.posts as post[];
+                } else {
+                    notification.error({
+                        message: '沒有找到任何貼文',
+                        description: '目前沒有可用的貼文資料',
+                        duration: 3
+                    });
+                }
+            } catch (error: any) {
+                notification.error({
+                    message: '獲取該用戶貼文信息失敗',
+                    description: error.response?.data?.error || '請稍後再試',
+                    duration: 3
+                });
+            }
+        },
         async checkFavorite(pid: string, uid: string): Promise<boolean> {
             try {
                 const response = await axios.post('http://localhost:8000/api/favorites/get/', {
@@ -360,6 +385,30 @@ export const useAuthStore = defineStore('auth', {
                 return 0; // 發生錯誤時返回默認值 0
             }
         },
+        //get user favorite
+        async getuserFavorites(uid: string) {
+            try {
+                const response = await axios.get(`http://localhost:8000/api/favorites/${uid}`);
+                if (response.status === 200) {
+                    this.postState.favorites = response.data.favorites as post[];
+                } else {
+                    notification.error({
+                        message: '沒有找到任何收藏',
+                        description: '目前沒有可用的收藏資料',
+                        duration: 3
+                    });
+                }
+            }
+            catch (error: any) {
+                notification.error({
+                    message: '獲取該用戶收藏信息失敗',
+                    description: error.response?.data?.error || '請稍後再試',
+                    duration: 3
+                });
+            }
+        }
+        ,
+
         async getAllComments(pid: string) {
             try {
                 const response = await axios.get(`http://localhost:8000/api/comment/${pid}`);
@@ -426,7 +475,7 @@ export const useAuthStore = defineStore('auth', {
                 });
             }
         },
-        //沒動  news的
+        //news的
         async getNewsAllComments(nid: string) {
             try {
                 const response = await axios.get(`http://localhost:8000/api/ncomment/${nid}`);

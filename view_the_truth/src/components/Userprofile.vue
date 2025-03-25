@@ -13,14 +13,9 @@
                 </a-avatar>
                 <!-- 新增圖片上傳功能 -->
                 <div class="upload-avatar">
-                  <a-upload
-                    v-model:file-list="fileList"
-                    action="http://localhost:8000/api/upload-avatar"
-                    list-type="picture-card"
-                    @preview="handlePreview"
-                    :show-upload-list="false"
-                    :before-upload="beforeUpload"
-                  >
+                  <a-upload v-model:file-list="fileList" action="http://localhost:8000/api/upload-avatar"
+                    list-type="picture-card" @preview="handlePreview" :show-upload-list="false"
+                    :before-upload="beforeUpload">
                     <div>
                       <plus-outlined />
                       <div style="margin-top: 8px">上傳頭像</div>
@@ -95,11 +90,11 @@
               </a-list>
             </a-tab-pane>
 
-            <!-- 發布的貼文 Tab -->
+            !-- 發布的貼文 Tab -->
             <a-tab-pane key="2" tab="發布的貼文">
-              <a-list class="post-list" :loading="!otherUser" item-layout="vertical" :data-source="userPosts">
+              <a-list class="post-list" :loading="loadingPosts" item-layout="vertical" :data-source="userPosts">
                 <template #renderItem="{ item }">
-                  <a-list-item>
+                  <a-list-item @click="goToPost(item.pid)" style="cursor: pointer;">
                     <template #actions>
                       <a-space>
                         <a-button type="link">
@@ -112,17 +107,11 @@
                           <template #icon>
                             <MessageOutlined />
                           </template>
-                          {{ item.comments }}
-                        </a-button>
-                        <a-button type="link">
-                          <template #icon>
-                            <ShareAltOutlined />
-                          </template>
-                          分享
+                          {{ item.comm_count }}
                         </a-button>
                       </a-space>
                     </template>
-                    <a-list-item-meta :title="item.title" :description="item.createTime">
+                    <a-list-item-meta :title="item.title" :description="item.crea_date">
                       <template #avatar>
                         <a-avatar :src="otherUser?.avatar">
                           {{ otherUser?.una.charAt(0).toUpperCase() }}
@@ -154,7 +143,7 @@
                   {{ formatDate(otherUser?.birthday) }}
                 </a-descriptions-item>
                 <a-descriptions-item label="註冊時間">
-                  {{formatDate(otherUser?.reg_date)}}
+                  {{ formatDate(otherUser?.reg_date) }}
                 </a-descriptions-item>
               </a-descriptions>
             </a-tab-pane>
@@ -239,22 +228,7 @@ const userActivities = ref([
 ])
 
 // 定義貼文列表數據
-const userPosts = ref([
-  {
-    title: 'Vue.js 3.0 新特性介紹',
-    content: 'Vue 3.0 帶來了許多令人興奮的新特性，包括 Composition API、更好的 TypeScript 支持等...',
-    createTime: '2024-03-20 14:30',
-    likes: 42,
-    comments: 15
-  },
-  {
-    title: '前端效能優化技巧分享',
-    content: '本文將分享一些實用的前端效能優化技巧，包括圖片懶加載、代碼分割等...',
-    createTime: '2024-03-18 16:45',
-    likes: 38,
-    comments: 12
-  }
-])
+// Removed duplicate declaration of userPosts
 
 // 管理面板用戶列表列定義
 const adminUserColumns = ref([
@@ -299,12 +273,27 @@ const adminUserList = ref([
 const isAdminUser = computed(() => {
   return otherUser.value?.role === 'admin'
 })
+const userPosts = ref([]); // 用戶貼文數據
+const loadingPosts = ref(true); // 貼文加載狀態
 
-// 在組件掛載時獲取用戶信息
-onMounted(async () => {
-  const userId = route.params.id as string
-  await authStore.getUserInfo(userId)
-})
+// 獲取用戶貼文
+const fetchUserPosts = async () => {
+  loadingPosts.value = true;
+  try {
+    const userId = route.params.id as string; // 從路由參數獲取用戶 ID
+    await authStore.getuserPosts(userId); // 調用 store 的方法
+    userPosts.value = authStore.postState.posts || []; // 綁定貼文數據
+  } catch (error) {
+    console.error('Failed to fetch user posts:', error);
+  } finally {
+    loadingPosts.value = false;
+  }
+};
+
+// 點擊貼文跳轉到詳情頁
+const goToPost = (postId: string) => {
+  router.push({ name: 'PostDetail', params: { id: postId } });
+};
 
 // 計算屬性：獲取其他用戶信息
 const otherUser = computed(() => authStore.userState.otherUser)
@@ -330,7 +319,7 @@ const getRoleColor = (role?: string) => {
   return roleColors[role ?? 'user']
 }
 const goTotop = () => {
-    router.push("/");
+  router.push("/");
 };
 
 // 圖片上傳相關邏輯
@@ -372,6 +361,14 @@ const getBase64 = (file: any) => {
     reader.onerror = error => reject(error)
   })
 }
+
+// 在組件掛載時獲取用戶信息
+onMounted(async () => {
+  const userId = route.params.id as string
+  await authStore.getUserInfo(userId)
+})
+
+
 </script>
 
 <style scoped>

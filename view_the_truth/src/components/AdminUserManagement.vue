@@ -49,15 +49,16 @@
         <!-- 搜尋區域 -->
         <a-card class="search-area" :style="{ background: '#f7f7f7', border: '1px solid #d9d9d9' }">
           <a-form layout="vertical">
-            <a-row :gutter="16">
-              <a-col :span="6">
+            <a-row :gutter="{ xs: 8, sm: 16, md: 24 }">
+              <!-- 搜尋條件欄位 -->
+              <a-col :xs="24" :sm="8" :md="8">
                 <a-form-item label="用戶名/信箱">
-                  <a-input-search v-model:value="searchQuery" placeholder="請輸入關鍵字" @search="handleSearch" />
+                  <a-input-search v-model:value="searchQuery" placeholder="請輸入關鍵字" />
                 </a-form-item>
               </a-col>
-              <a-col :span="6">
+              <a-col :xs="24" :sm="8" :md="8">
                 <a-form-item label="用戶狀態">
-                  <a-select v-model:value="filterStatus" style="width: 100%" @change="handleSearch">
+                  <a-select v-model:value="filterStatus" style="width: 100%">
                     <a-select-option value="all">全部</a-select-option>
                     <a-select-option value="active">正常</a-select-option>
                     <a-select-option value="banned">已封禁</a-select-option>
@@ -65,33 +66,34 @@
                   </a-select>
                 </a-form-item>
               </a-col>
-              <a-col :span="8">
+              <a-col :xs="24" :sm="8" :md="8">
                 <a-form-item label="註冊時間">
-                  <a-range-picker v-model:value="dateRange" @change="handleSearch" />
+                  <a-range-picker v-model:value="dateRange" style="width: 100%" />
                 </a-form-item>
               </a-col>
-              <a-col :span="4">
-                <a-form-item>
-                  <a-space>
-                    <a-button type="primary" @click="handleSearch">
-                      <template #icon>
-                        <SearchOutlined />
-                      </template>
-                      搜尋
-                    </a-button>
-                    <a-button @click="resetSearch">
-                      <template #icon>
-                        <ReloadOutlined />
-                      </template>
-                      重置
-                    </a-button>
-                  </a-space>
-                </a-form-item>
+            </a-row>
+
+            <!-- 搜尋按鈕區域 -->
+            <a-row>
+              <a-col :span="24" style="text-align: center; margin-top: 8px;">
+                <a-space size="middle">
+                  <a-button type="primary" @click="handleSearch">
+                    <template #icon>
+                      <SearchOutlined />
+                    </template>
+                    搜尋
+                  </a-button>
+                  <a-button @click="resetSearch">
+                    <template #icon>
+                      <ReloadOutlined />
+                    </template>
+                    重置
+                  </a-button>
+                </a-space>
               </a-col>
             </a-row>
           </a-form>
         </a-card>
-
         <!-- 表格工具欄 -->
         <a-card class="table-toolbar" :style="{ marginBottom: '16px', background: '#fafafa' }">
           <a-row :gutter="16" align="middle">
@@ -586,20 +588,34 @@ a-button {
   border-radius: 4px;
 }
 
-/* 響應式處理 */
-@media (max-width: 768px) {
+/* 響應式調整 */
+@media (max-width: 576px) {
   .search-area {
     margin: 8px;
-    padding: 8px;
+    padding: 12px;
   }
-
-  .table-toolbar {
-    flex-direction: column;
-    align-items: flex-start;
+  
+  :deep(.ant-form-item) {
+    margin-bottom: 12px;
   }
+  
+  :deep(.ant-space) {
+    display: flex;
+    gap: 8px;
+  }
+  
+  :deep(.ant-btn) {
+    min-width: 120px;
+  }
+}
 
-  .table-toolbar a-button {
-    margin-bottom: 8px;
+@media (max-width: 768px) {
+  .search-area :deep(.ant-form-item-label) {
+    padding-bottom: 4px;
+  }
+  
+  .search-area :deep(.ant-col) {
+    padding-bottom: 8px;
   }
 }
 </style>

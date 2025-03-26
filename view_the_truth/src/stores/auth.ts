@@ -26,6 +26,16 @@ interface UserState {
         reg_date:string
         avatar?: string
     } | null
+    otherUsers: { 
+        uid: string;
+        una: string;
+        email: string;
+        role: string;
+        birthday: string;
+        usex: string;
+        reg_date: string;
+        avatar?: string;
+    }[] | null
 }
 
 interface Community {
@@ -101,7 +111,8 @@ export const useAuthStore = defineStore('auth', {
         userState: {
             user: null,
             isAuthenticated: false,
-            otherUser: null
+            otherUser: null,
+            otherUsers: null
         },
         communityState: {
             community: null,
@@ -227,7 +238,27 @@ export const useAuthStore = defineStore('auth', {
                 });
             }
         },
-
+        async getAllUsers() {
+            try {
+                const response = await axios.get('http://localhost:8000/api/user/all');
+                if (response.status === 200) {
+                    this.userState.otherUsers = response.data.users as UserState['otherUsers'];
+                } else {
+                    notification.error({
+                        message: '沒有找到任何用戶',
+                        description: '目前沒有可用的用戶資料',
+                        duration: 3
+                    });
+                }
+            }
+            catch (error: any) {
+                notification.error({
+                    message: '獲取所有用戶信息失敗',
+                    description: error.response?.data?.error || '請稍後再試',
+                    duration: 3
+                });
+            }
+        },
         async getUserInfo(uid: string) {
             try {
                 const response = await axios.get(`http://localhost:8000/api/user/${uid}`);

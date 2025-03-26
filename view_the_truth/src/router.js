@@ -6,7 +6,7 @@ import Community from './components/community.vue'
 import Post from './components/post.vue'
 import News from './components/newhome.vue'
 import Newspage from './components/newspage.vue'
-
+import AdminUserManagement from './components/AdminUserManagement.vue'
 const routes = [
     { path: '/', component: Home, name: 'home' },
     { path: '/register', component: Register, name: 'register' },
@@ -15,6 +15,7 @@ const routes = [
     { path: '/userprofile/:id', component: Userprofile, name: 'userprofile' },
     { path: '/community/:id', component: Community, name: 'community' },
     { path: '/post/:id', component: Post, name: 'post' },
+    { path : '/adminusermanagement', component: AdminUserManagement, name: 'adminusermanagement'}
 ]
 
 const router = createRouter({

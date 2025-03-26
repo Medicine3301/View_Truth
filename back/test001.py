@@ -27,7 +27,7 @@ DB_CONFIG = {
     "password": "123456",
     "db": "new_community",
     "charset": "utf8mb4",
-    "port": 3305
+    "port": 3306
 }
 
 app.static('/static', './static')
@@ -674,9 +674,6 @@ async def get_userfavorite_post(request, uid):
                     (uid,)
                 )
                 favorite_posts= await cur.fetchall()
-
-                if not favorite_posts:
-                    return json({"error": "找尋不到任何收藏貼文"}, status=404)
 
                 # 處理每個社群的數據
                 response = [

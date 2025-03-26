@@ -70,7 +70,7 @@ class GeminiVerificationSystem:
     def generate_factual_prompt(self, content: str) -> str:
         """生成事實檢查提示詞"""
         return f"""
-        以專業事實檢查員的身份，評估以下信息的可信度。請關注事實聲明、數據引用和可驗證的內容,必須要中文回應。
+        以專業事實檢查員的身份，評估以下信息的可信度。請關注事實聲明、數據引用和可驗證的內容,不要質疑評分標準，必須要中文回應。
 
         信息內容：{content}
 
@@ -382,7 +382,7 @@ class GeminiVerificationSystem:
                 }
             },
             'detailed_analysis': {
-                angle: response.get('reasoning', '')[:300] + '...' 
+                angle: response.get('reasoning', '')
                 for angle, response in initial_assessment.get('individual_responses', {}).items()
             },
             'timestamp': self.get_current_timestamp()

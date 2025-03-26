@@ -28,7 +28,7 @@
           <PieChartOutlined />
           <span class="nav-text">網站數據管理</span>
         </a-menu-item>
-        <a-menu-item key="adminPanel2">
+        <a-menu-item key="adminPanel2" @click="router.push('/adminusermanagement')">
           <UserOutlined />
           <span class="nav-text">用戶管理</span>
         </a-menu-item>

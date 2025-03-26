@@ -27,7 +27,7 @@ DB_CONFIG = {
     "password": "123456",
     "db": "new_community",
     "charset": "utf8mb4",
-    "port": 3306
+    "port": 3305
 }
 
 app.static('/static', './static')
@@ -658,7 +658,86 @@ async def get_community_info(request, cid):
         print(f"Error in get_community_info: {str(e)}")
         return json({"error": str(e)}, status=400)
 
+@app.get("/api/userfavorites/<uid>")
+async def get_userfavorite_post(request, uid):
+    """獲取該使用者收藏社群貼文信息的 API"""
+    try:
+        async with app.ctx.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute(
+                    """
+                    SELECT post.pid, post.title, post.content, post.comm_count,
+                    post.crea_date, post.una, post.cid, post.uid
+                    FROM collect 
+                    JOIN post ON collect.pid = post.pid where collect.uid=%s
+                    """,
+                    (uid,)
+                )
+                favorite_posts= await cur.fetchall()
 
+                if not favorite_posts:
+                    return json({"error": "找尋不到任何收藏貼文"}, status=404)
+
+                # 處理每個社群的數據
+                response = [
+                    {
+                        "pid": post["pid"],
+                        "cid": post["cid"],
+                        "uid": post["uid"],
+                        "una": post["una"],
+                        "title": post["title"],
+                        "content": post["content"],
+                        "comm_count": post["comm_count"],
+                        "crea_date": (
+                            post["crea_date"].isoformat() if post["crea_date"] else None
+                        ),
+                    }
+                    for post in favorite_posts
+                ]
+
+                return json({"favorite_posts": response}, status=200)
+    except Exception as e:
+        print(f"Error in get_user_posts: {str(e)}")
+        return json({"error": str(e)}, status=400)
+
+
+@app.get("/api/userpost/<uid>")
+async def get_user_post(request, uid):
+    """獲取所有社群貼文信息的 API"""
+    try:
+        async with app.ctx.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute(
+                    "SELECT pid, cid, uid, una,title,content,comm_count,crea_date FROM post where uid=%s",
+                    (uid),
+                ),
+                posts = await cur.fetchall()
+
+                if not posts:
+                    return json({"error": "找尋不到任何貼文"}, status=404)
+
+                # 處理每個社群的數據
+                response = [
+                    {
+                        "pid": post["pid"],
+                        "cid": post["cid"],
+                        "uid": post["uid"],
+                        "una": post["una"],
+                        "title": post["title"],
+                        "content": post["content"],
+                        "comm_count": post["comm_count"],
+                        "crea_date": (
+                            post["crea_date"].isoformat() if post["crea_date"] else None
+                        ),
+                    }
+                    for post in posts
+                ]
+
+                return json({"posts": response}, status=200)
+    except Exception as e:
+        print(f"Error in get_userpost_posts: {str(e)}")
+        return json({"error": str(e)}, status=400)
+    
 @app.get("/api/posts/<cid>")
 async def get_all_post(request, cid):
     """獲取所有社群貼文信息的 API"""

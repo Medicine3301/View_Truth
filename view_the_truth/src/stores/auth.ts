@@ -388,9 +388,9 @@ export const useAuthStore = defineStore('auth', {
         //get user favorite
         async getuserFavorites(uid: string) {
             try {
-                const response = await axios.get(`http://localhost:8000/api/favorites/${uid}`);
+                const response = await axios.get(`http://localhost:8000/api/userfavorites/${uid}`);
                 if (response.status === 200) {
-                    this.postState.favorites = response.data.favorites as post[];
+                    this.postState.favorites = response.data.favorite_posts as post[]; // 修改這裡
                 } else {
                     notification.error({
                         message: '沒有找到任何收藏',

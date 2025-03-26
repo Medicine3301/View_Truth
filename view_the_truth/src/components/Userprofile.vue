@@ -69,59 +69,39 @@
       <a-col :xs="24" :sm="24" :md="16" :lg="18">
         <a-card :bordered="false">
           <a-tabs default-active-key="1">
-            <!-- 動態消息 Tab -->
-            <a-tab-pane key="1" tab="動態消息">
-              <a-list class="activity-list" :loading="!otherUser" item-layout="horizontal"
-                :data-source="userActivities">
-                <template #renderItem="{ item }">
-                  <a-list-item>
-                    <a-list-item-meta :description="item.time">
-                      <template #title>
-                        <a href="javascript:;">{{ item.title }}</a>
-                      </template>
-                      <template #avatar>
-                        <a-avatar :style="{ backgroundColor: item.avatarColor }">
-                          {{ item.icon }}
-                        </a-avatar>
-                      </template>
-                    </a-list-item-meta>
-                  </a-list-item>
-                </template>
-              </a-list>
-            </a-tab-pane>
-
-            !-- 發布的貼文 Tab -->
             <a-tab-pane key="2" tab="發布的貼文">
-              <a-list class="post-list" :loading="loadingPosts" item-layout="vertical" :data-source="userPosts">
+              <a-list v-if="(userPosts ?? []).length > 0" class="post-list" :loading="loadingPosts"
+                item-layout="vertical" :data-source="userPosts">
                 <template #renderItem="{ item }">
-                  <a-list-item @click="goToPost(item.pid)" style="cursor: pointer;">
+                  <a-list-item class="post-list-item" @click="goToPost(item.pid)" style="cursor: pointer;">
                     <template #actions>
                       <a-space>
                         <a-button type="link">
                           <template #icon>
                             <LikeOutlined />
                           </template>
-                          {{ item.likes }}
+                          {{ item.likes || 0 }}
                         </a-button>
                         <a-button type="link">
                           <template #icon>
                             <MessageOutlined />
                           </template>
-                          {{ item.comm_count }}
+                          {{ item.comm_count || 0 }}
                         </a-button>
                       </a-space>
                     </template>
-                    <a-list-item-meta :title="item.title" :description="item.crea_date">
+                    <a-list-item-meta :title="item.title" :description="formatDate(item.crea_date)">
                       <template #avatar>
                         <a-avatar :src="otherUser?.avatar">
                           {{ otherUser?.una.charAt(0).toUpperCase() }}
                         </a-avatar>
                       </template>
                     </a-list-item-meta>
-                    {{ item.content }}
+                    <span v-html="item.content"></span>
                   </a-list-item>
                 </template>
               </a-list>
+              <a-empty v-else description="暫無發布的貼文" />
             </a-tab-pane>
 
             <!-- 個人資料 Tab -->
@@ -150,38 +130,24 @@
 
             <!-- 收藏的貼文 Tab -->
             <a-tab-pane key="4" tab="收藏的貼文">
-              <a-empty description="暫無收藏的貼文" />
+              <a-list v-if="(userFavorites ?? []).length > 0" class="post-list " :loading="loadingPosts" item-layout="vertical"
+                :data-source="userFavorites">
+                <template #renderItem="{ item }">
+                  <a-list-item class="post-list-item" @click="goToPost(item.pid)" style="cursor: pointer;">
+                    <a-list-item-meta :title="item.title" :description="formatDate(item.crea_date)">
+                      <template #avatar>
+                        <a-avatar :src="otherUser?.avatar">
+                          {{ otherUser?.una.charAt(0).toUpperCase() }}
+                        </a-avatar>
+                      </template>
+                    </a-list-item-meta>
+                    <span v-html="item.content"></span>
+                  </a-list-item>
+                </template>
+              </a-list>
+              <a-empty v-else description="暫無收藏的貼文" />
             </a-tab-pane>
 
-            <!-- 管理面板 Tab (僅管理員可見) -->
-            <a-tab-pane v-if="isAdminUser" key="5" tab="管理面板">
-              <a-card title="用戶管理">
-                <a-row :gutter="[16, 16]">
-                  <a-col :xs="24" :sm="12" :md="8" :lg="6">
-                    <a-statistic title="總用戶數" value="1,024" />
-                  </a-col>
-                  <a-col :xs="24" :sm="12" :md="8" :lg="6">
-                    <a-statistic title="今日新增" value="42" />
-                  </a-col>
-                  <a-col :xs="24" :sm="12" :md="8" :lg="6">
-                    <a-statistic title="活躍用戶" value="512" />
-                  </a-col>
-                </a-row>
-
-                <a-divider />
-
-                <a-table :columns="adminUserColumns" :data-source="adminUserList" :scroll="{ x: 'max-content' }">
-                  <template #bodyCell="{ column, record }">
-                    <template v-if="column.key === 'operation'">
-                      <a-button-group>
-                        <a-button type="primary" size="small">編輯</a-button>
-                        <a-button danger size="small">刪除</a-button>
-                      </a-button-group>
-                    </template>
-                  </template>
-                </a-table>
-              </a-card>
-            </a-tab-pane>
           </a-tabs>
         </a-card>
       </a-col>
@@ -205,75 +171,16 @@ const route = useRoute();
 const router = useRouter();
 
 
-// 定義活動列表數據
-const userActivities = ref([
-  {
-    title: '在社群"程式設計"發布了新貼文',
-    time: '2024-03-20 14:30',
-    avatarColor: '#1890ff',
-    icon: '文'
-  },
-  {
-    title: '加入了新社群"Web開發"',
-    time: '2024-03-19 09:15',
-    avatarColor: '#52c41a',
-    icon: '群'
-  },
-  {
-    title: '收藏了一篇文章',
-    time: '2024-03-18 16:45',
-    avatarColor: '#faad14',
-    icon: '收'
-  }
-])
-
-// 定義貼文列表數據
-// Removed duplicate declaration of userPosts
-
-// 管理面板用戶列表列定義
-const adminUserColumns = ref([
-  {
-    title: '用戶名稱',
-    dataIndex: 'username',
-    key: 'username'
-  },
-  {
-    title: '電子郵件',
-    dataIndex: 'email',
-    key: 'email'
-  },
-  {
-    title: '角色',
-    dataIndex: 'role',
-    key: 'role'
-  },
-  {
-    title: '操作',
-    key: 'operation'
-  }
-])
-
-// 管理面板用戶列表模擬數據
-const adminUserList = ref([
-  {
-    key: '1',
-    username: 'admin1',
-    email: 'admin1@example.com',
-    role: 'admin'
-  },
-  {
-    key: '2',
-    username: 'moderator1',
-    email: 'moderator1@example.com',
-    role: 'moderator'
-  }
-])
 
 // 是否為管理員用戶
 const isAdminUser = computed(() => {
   return otherUser.value?.role === 'admin'
 })
-const userPosts = ref([]); // 用戶貼文數據
+
+//計算屬性：獲取其他用戶信息
+const otherUser = computed(() => authStore.userState.otherUser)
+const userPosts = computed(() => authStore.postState.posts); // 用戶貼文數據
+const userFavorites = computed(() => authStore.postState.favorites); // 用戶收藏的貼文數據
 const loadingPosts = ref(true); // 貼文加載狀態
 
 // 獲取用戶貼文
@@ -281,8 +188,8 @@ const fetchUserPosts = async () => {
   loadingPosts.value = true;
   try {
     const userId = route.params.id as string; // 從路由參數獲取用戶 ID
-    await authStore.getuserPosts(userId); // 調用 store 的方法
-    userPosts.value = authStore.postState.posts || []; // 綁定貼文數據
+    await authStore.getuserPosts(userId); // 調用 store 的方法獲取用戶貼文
+    await authStore.getuserFavorites(userId); // 獲取用戶信息
   } catch (error) {
     console.error('Failed to fetch user posts:', error);
   } finally {
@@ -290,13 +197,19 @@ const fetchUserPosts = async () => {
   }
 };
 
-// 點擊貼文跳轉到詳情頁
-const goToPost = (postId: string) => {
-  router.push({ name: 'PostDetail', params: { id: postId } });
-};
+const goToPost = async (postId: string) => {
+  try {
+    await router.push({
+      name: 'post',
+      params: { id: postId }
+    })
+  } catch (error) {
+    message.error('無法開啟貼文')
+    console.error('Error navigating to post:', error)
+  }
+}
 
-// 計算屬性：獲取其他用戶信息
-const otherUser = computed(() => authStore.userState.otherUser)
+
 
 // 日期格式化函數
 const formatDate = (dateString?: string) => {
@@ -366,6 +279,7 @@ const getBase64 = (file: any) => {
 onMounted(async () => {
   const userId = route.params.id as string
   await authStore.getUserInfo(userId)
+  await fetchUserPosts()
 })
 
 
@@ -448,5 +362,23 @@ onMounted(async () => {
 
 :deep(.ant-descriptions-item-label) {
   width: 120px;
+}
+/* 貼文項目樣式 */
+.post-list-item {
+  padding: 16px;
+  background-color: #ffffff;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+}
+
+.post-list-item:hover {
+  background-color: #e6f7ff; /* 更明顯的淡藍色背景 */
+  border-color: #1890ff;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15); /* 增強陰影效果 */
+  transform: translateY(-4px); /* 上移效果 */
 }
 </style>

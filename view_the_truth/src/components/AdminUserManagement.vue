@@ -62,7 +62,6 @@
                     <a-select-option value="all">全部</a-select-option>
                     <a-select-option value="active">正常</a-select-option>
                     <a-select-option value="banned">已封禁</a-select-option>
-                    <a-select-option value="suspended">已停用</a-select-option>
                   </a-select>
                 </a-form-item>
               </a-col>

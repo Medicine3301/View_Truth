@@ -93,6 +93,7 @@ async def register(request):
 
         async with app.ctx.pool.acquire() as conn:
             async with conn.cursor() as cur:
+                # 插入用戶資料表
                 await cur.execute(
                     """
                     INSERT INTO users (uid, una, birthday, usex, email, passwd)
@@ -100,6 +101,14 @@ async def register(request):
                     """,
                     (uid, data["name"], birthday_date, data["sex"], 
                      data["email"], hashed_password.decode())
+                )
+                # 註冊成功後，插入用戶統計數據表
+                await cur.execute(
+                    """
+                    INSERT INTO user_statistics (uid, una) values (%s, %s)
+
+                    """,
+                    (uid, data["name"])
                 )
         return json({"message": "註冊成功", "uid": uid}, status=201)
 

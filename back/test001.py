@@ -1061,8 +1061,7 @@ async def get_users(request):
     """獲取用戶列表，支持篩選、分頁和排序，並包含其他表的 status 狀態"""
     try:
         # 獲取查詢參數
-        role = request.args.get("role")  # 篩選條件：角色
-        usex = request.args.get("usex")  # 篩選條件：性別
+        una= request.args.get("una")  # 篩選條件：用戶名
         status = request.args.get("status")  # 篩選條件：用戶狀態
         start_date = request.args.get("start_date")  # 註冊開始日期
         end_date = request.args.get("end_date")  # 註冊結束日期
@@ -1080,8 +1079,7 @@ async def get_users(request):
                 users.uid, 
                 users.una, 
                 users.email, 
-                users.role, 
-                users.usex, 
+                users.role,
                 users.reg_date, 
                 user_statistics.status 
             FROM 
@@ -1095,12 +1093,10 @@ async def get_users(request):
         params = []
 
         # 添加篩選條件
-        if role:
-            query += " AND users.role = %s"
-            params.append(role)
-        if usex:
-            query += " AND users.usex = %s"
-            params.append(usex)
+        if una:
+            query += " AND users.una LIKE %s"
+            params.append(f"%{una}%")
+        # 注意：這裡的 status 是用戶統計表中的狀態
         if status:
             query += " AND user_statistics.status = %s"
             params.append(status)
@@ -1141,10 +1137,8 @@ async def get_users(request):
                     ON users.uid = user_statistics.uid
                     WHERE 1=1
                 """
-                if role:
-                    count_query += " AND users.role = %s"
-                if usex:
-                    count_query += " AND users.usex = %s"
+                if una:
+                    count_query += " AND users.una LIKE %s"
                 if status:
                     count_query += " AND user_statistics.status = %s"
                 if start_date:

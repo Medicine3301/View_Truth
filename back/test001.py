@@ -975,7 +975,191 @@ async def post_comment_update(request, pid):
 
     except Exception as e:
         return json({"error": f"服務器錯誤: {str(e)}"}, status=500)
+#user 統計數據獲取
+@app.get("/api/user_statistics/overview")
+async def get_statistics_overview(request):
+    try:
+        async with app.ctx.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                # 總用戶數
+                await cur.execute("SELECT COUNT(*) AS totalUsers FROM users;")
+                total_users = (await cur.fetchone())["totalUsers"]
 
+                # 本月新增用戶數
+                await cur.execute("""
+                    SELECT COUNT(*) AS monthlyNewUsers 
+                    FROM users 
+                    WHERE reg_date >= DATE_FORMAT(CURDATE(), '%Y-%m-01');
+                """)
+                monthly_new_users = (await cur.fetchone())["monthlyNewUsers"]
+
+                # 待處理檢舉數
+                await cur.execute("""
+                    SELECT COUNT(*) AS pendingReports 
+                    FROM reports 
+                    WHERE status = 'pending';
+                """)
+                pending_reports = (await cur.fetchone())["pendingReports"]
+
+                # 今日活躍用戶數
+                await cur.execute("""
+                    SELECT COUNT(DISTINCT uid) AS todayActiveUsers 
+                    FROM user_activity 
+                    WHERE activity_time >= CURDATE();
+                """)
+                today_active_users = (await cur.fetchone())["todayActiveUsers"]
+
+            return json({
+                "totalUsers": total_users,
+                "monthlyNewUsers": monthly_new_users,
+                "pendingReports": pending_reports,
+                "todayActiveUsers": today_active_users
+            })
+    except Exception as e:
+        return json({"服務器錯誤": str(e)}, status=500)
+#特定用戶獲取
+@app.get("/api/user_statistics/<uid>")
+async def get_user_statistics(request, uid):
+    try:
+        async with app.ctx.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                # 查詢用戶基本信息
+                await cur.execute(
+                    "SELECT una, email, role, reg_date FROM users WHERE uid=%s",
+                    (uid,),
+                )
+                user = await cur.fetchone()
+                if not user:
+                    print(f"UID {uid} 不存在")
+                    return json({"error": "找尋不到該用戶"}, status=404)
+
+                # 查詢用戶統計信息
+                await cur.execute(
+                    "SELECT status FROM user_statistics WHERE uid = %s",
+                    (uid,),
+                )
+                status = await cur.fetchone()
+                if not status:
+                    return json({"error": "找不到該用戶統計信息"}, status=404)
+
+                # 合併結果
+                user_statistics = {
+                    "una": user["una"],
+                    "email": user["email"],
+                    "role": user["role"],
+                    "reg_date": user["reg_date"].isoformat() if user["reg_date"] else None,
+                    "status": status["status"],
+                }
+
+                print(f"成功獲取用戶統計信息: {user_statistics}")  # 添加日志
+                return json({"userdetail": user_statistics}, status=200)
+
+    except Exception as e:
+        return json({"服務器錯誤": str(e)}, status=500)
+@app.get("/api/users")
+async def get_users(request):
+    """獲取用戶列表，支持篩選、分頁和排序，並包含其他表的 status 狀態"""
+    try:
+        # 獲取查詢參數
+        role = request.args.get("role")  # 篩選條件：角色
+        usex = request.args.get("usex")  # 篩選條件：性別
+        status = request.args.get("status")  # 篩選條件：用戶狀態
+        start_date = request.args.get("start_date")  # 註冊開始日期
+        end_date = request.args.get("end_date")  # 註冊結束日期
+        page = int(request.args.get("page", 1))  # 分頁：當前頁數，默認第 1 頁
+        page_size = int(request.args.get("pageSize", 10))  # 分頁：每頁大小，默認 10 條
+        sort_by = request.args.get("sortBy", "reg_date")  # 排序字段，默認按註冊日期
+        order = request.args.get("order", "desc")  # 排序順序，默認降序
+
+        # 計算偏移量
+        offset = (page - 1) * page_size
+
+        # 構建 SQL 查詢
+        query = """
+            SELECT 
+                users.uid, 
+                users.una, 
+                users.email, 
+                users.role, 
+                users.usex, 
+                users.reg_date, 
+                user_statistics.status 
+            FROM 
+                users
+            LEFT JOIN 
+                user_statistics 
+            ON 
+                users.uid = user_statistics.uid
+            WHERE 1=1
+        """
+        params = []
+
+        # 添加篩選條件
+        if role:
+            query += " AND users.role = %s"
+            params.append(role)
+        if usex:
+            query += " AND users.usex = %s"
+            params.append(usex)
+        if status:
+            query += " AND user_statistics.status = %s"
+            params.append(status)
+        if start_date:
+            query += " AND users.reg_date >= %s"
+            params.append(start_date)
+        if end_date:
+            query += " AND users.reg_date <= %s"
+            params.append(end_date)
+
+        # 添加排序條件
+        if sort_by not in ["reg_date", "una"]:
+            sort_by = "reg_date"  # 默認排序字段
+        if order not in ["asc", "desc"]:
+            order = "desc"  # 默認排序順序
+        query += f" ORDER BY {sort_by} {order}"
+
+        # 添加分頁條件
+        query += " LIMIT %s OFFSET %s"
+        params.extend([page_size, offset])
+
+        # 執行查詢
+        async with app.ctx.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute(query, params)
+                users = await cur.fetchall()
+
+                # 處理 datetime 對象
+                for user in users:
+                    if user["reg_date"]:
+                        user["reg_date"] = user["reg_date"].isoformat()
+
+                # 查詢總記錄數
+                count_query = """
+                    SELECT COUNT(*) AS total 
+                    FROM users
+                    LEFT JOIN user_statistics 
+                    ON users.uid = user_statistics.uid
+                    WHERE 1=1
+                """
+                if role:
+                    count_query += " AND users.role = %s"
+                if usex:
+                    count_query += " AND users.usex = %s"
+                if status:
+                    count_query += " AND user_statistics.status = %s"
+                if start_date:
+                    count_query += " AND users.reg_date >= %s"
+                if end_date:
+                    count_query += " AND users.reg_date <= %s"
+
+                await cur.execute(count_query, params[:-2])  # 不包括 LIMIT 和 OFFSET 的參數
+                total = (await cur.fetchone())["total"]
+
+        # 返回結果
+        return json({"users": users, "total": total, "page": page, "pageSize": page_size}, status=200)
+
+    except Exception as e:
+        return json({"error": f"服務器錯誤: {str(e)}"}, status=500)
 
 
 if __name__ == "__main__":

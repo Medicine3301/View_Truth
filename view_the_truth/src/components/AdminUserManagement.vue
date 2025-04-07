@@ -60,7 +60,7 @@
                 <a-form-item label="用戶狀態">
                   <a-select v-model:value="filterStatus" style="width: 100%">
                     <a-select-option value="all">全部</a-select-option>
-                    <a-select-option value="active">正常</a-select-option>
+                    <a-select-option value="normal">正常</a-select-option>
                     <a-select-option value="banned">已封禁</a-select-option>
                   </a-select>
                 </a-form-item>
@@ -159,9 +159,12 @@
               <a-descriptions-item label="信箱" :span="3">
                 {{ selectedUser.email }}
               </a-descriptions-item>
+              <a-descriptions-item label="角色" :span="3">
+                {{ selectedUser.role === 'admin' ? '管理員' : '一般用戶' }}
+              </a-descriptions-item>
               <a-descriptions-item label="狀態" :span="3">
                 <a-tag :color="selectedUser.status === 'active' ? 'green' : 'red'">
-                  {{ selectedUser.status === 'active' ? '正常' : '已封禁' }}
+                  {{ selectedUser.status === 'active' ? 'normal' : 'banned' }}
                 </a-tag>
               </a-descriptions-item>
               <a-descriptions-item label="註冊時間" :span="3">

@@ -25,8 +25,7 @@ const vuetify = createVuetify({
 app.use(pinia)
     .use(router)
     .use(Antd)  // 使用 Ant Design Vue
-    .use(vuetify)// 使用vuetify
-    .use(TinyVue)
+    .use(vuetify)// 使用vuetif
     .mount('#app')
 
 // 主入口文件：创建 Vue 应用实例，集成 Pinia、Vue Router、Element Plus 和 Ant Design Vue

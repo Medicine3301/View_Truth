@@ -12,7 +12,7 @@ interface UserState {
         role: string
         birthday: string
         usex: string
-        reg_date:string
+        reg_date: string
         avatar?: string
     } | null
     isAuthenticated: boolean
@@ -23,10 +23,10 @@ interface UserState {
         role: string
         birthday: string
         usex: string
-        reg_date:string
+        reg_date: string
         avatar?: string
     } | null
-    otherUsers: { 
+    otherUsers: {
         uid: string;
         una: string;
         email: string;
@@ -35,6 +35,14 @@ interface UserState {
         usex: string;
         reg_date: string;
         avatar?: string;
+    }[] | null
+    Getuser: {
+        uid: string
+        una: string
+        email: string
+        role: string
+        reg_date: string
+        status: string
     }[] | null
 }
 
@@ -112,7 +120,8 @@ export const useAuthStore = defineStore('auth', {
             user: null,
             isAuthenticated: false,
             otherUser: null,
-            otherUsers: null
+            otherUsers: null,
+            Getuser: null
         },
         communityState: {
             community: null,
@@ -238,25 +247,27 @@ export const useAuthStore = defineStore('auth', {
                 });
             }
         },
-        async getAllUsers() {
+        //獲取用戶列表(後台)
+        async fetchUsers(params: Record<string, any>) {
             try {
-                const response = await axios.get('http://localhost:8000/api/user/all');
+                const response = await axios.get('http://localhost:8000/api/users', { params });
                 if (response.status === 200) {
-                    this.userState.otherUsers = response.data.users as UserState['otherUsers'];
+                    return response.data; // 返回後端數據
                 } else {
                     notification.error({
-                        message: '沒有找到任何用戶',
-                        description: '目前沒有可用的用戶資料',
+                        message: '加載用戶列表失敗',
+                        description: '無法獲取用戶數據，請稍後再試',
                         duration: 3
                     });
+                    throw new Error('加載用戶列表失敗');
                 }
-            }
-            catch (error: any) {
+            } catch (error: any) {
                 notification.error({
-                    message: '獲取所有用戶信息失敗',
+                    message: '加載用戶列表失敗',
                     description: error.response?.data?.error || '請稍後再試',
                     duration: 3
                 });
+                throw error;
             }
         },
         async getUserInfo(uid: string) {
@@ -387,14 +398,14 @@ export const useAuthStore = defineStore('auth', {
                     pid,
                     uid,
                 });
-                
+
                 console.log('獲取收藏狀態成功:', response.data);
-                
+
                 // 檢查 response.data 中的實際收藏狀態
                 // 根據你的 API 返回數據結構來判斷
                 // 例如：response.data.isFavorited 或 response.data.exists 等
                 return response.data.isFavorited || response.data.exists || false;
-                
+
             } catch (error: any) {
                 console.error('獲取收藏狀態失敗:', error);
                 return false;
@@ -408,7 +419,7 @@ export const useAuthStore = defineStore('auth', {
                     uid,
                 });
                 console.log('獲取評分狀態成功:', response.data);
-        
+
                 // 確保返回評分值，如果後端返回的數據中有 score
                 return response.data.score || 0; // 如果沒有評分，返回默認值 0
             } catch (error: any) {
@@ -460,7 +471,7 @@ export const useAuthStore = defineStore('auth', {
                 });
             }
         },
-        
+
         async getAllnewsies() {
             try {
                 const response = await axios.get('http://localhost:8000/api/news/all');

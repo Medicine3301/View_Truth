@@ -130,20 +130,24 @@
 
           <!-- 用戶狀態列 -->
           <template #status="{ text }">
-            <a-tag :color="text === 'active' ? 'green' : 'red'">
-              {{ text === 'active' ? '正常' : '已封禁' }}
+            <a-tag :color="text === '正常' ? 'green' : text === '已封禁' ? 'red' : 'gray'">
+              {{ text }}
             </a-tag>
           </template>
 
-          <!-- 操作列 -->
           <template #action="{ record }">
             <a-space>
+              <!-- 詳情按鈕 -->
               <a-button type="primary" size="small" @click="openUserDrawer(record)">
                 詳情
               </a-button>
-              <a-button :type="record.status === 'active' ? 'danger' : 'primary'" size="small"
-                @click="toggleUserStatus(record)">
-                {{ record.status === 'active' ? '封禁' : '解封' }}
+
+              <!-- 狀態切換按鈕 -->
+              <a-button :type="record.status === 'banned' ? 'danger' : 'success'"
+                size="small"
+                @click="toggleUserStatus(record)"
+                >
+                {{ record.status === 'banned' ? '解封' : '封禁' }}
               </a-button>
             </a-space>
           </template>
@@ -292,22 +296,39 @@ const pagination = ref<TablePaginationConfig>({
 
 const authStore = useAuthStore();
 
-// 載入用戶數據
 const loadUsers = async () => {
-  loading.value = true;
+  loading.value = true; // 開啟加載狀態
   try {
-    const response = await authStore.getAllUsers({
+    const params = {
       page: pagination.value.current,
       pageSize: pagination.value.pageSize,
-      search: searchQuery.value,
-      status: filterStatus.value
-    });
-    users.value = response.users;
+      una: searchQuery.value || undefined, // 用戶名/信箱關鍵字
+      status: filterStatus.value !== 'all' ? filterStatus.value : undefined, // 用戶狀態
+      start_date: dateRange.value ? dateRange.value[0].format('YYYY-MM-DD') : undefined, // 註冊開始日期
+      end_date: dateRange.value ? dateRange.value[1].format('YYYY-MM-DD') : undefined // 註冊結束日期
+    };
+
+    // 發送請求
+    const response = await authStore.fetchUsers(params);
+
+    // 更新表格數據
+    users.value = response.users.map((user: any) => ({
+      key: user.uid, // 表格需要的唯一鍵
+      username: user.una,
+      email: user.email,
+      role: user.role === 'admin' ? '管理員' : '一般用戶',
+      status: user.status === 'normal' ? '正常' : user.status === 'banned' ? '已封禁' : '未知狀態',
+      createdAt: user.reg_date
+    }));
+
+    // 更新分頁信息
     pagination.value.total = response.total;
+    pagination.value.current = response.page;
+    pagination.value.pageSize = response.pageSize;
   } catch (error) {
-    message.error('載入用戶數據失敗');
+    message.error('加載用戶列表失敗');
   } finally {
-    loading.value = false;
+    loading.value = false; // 關閉加載狀態
   }
 };
 
@@ -596,16 +617,16 @@ a-button {
     margin: 8px;
     padding: 12px;
   }
-  
+
   :deep(.ant-form-item) {
     margin-bottom: 12px;
   }
-  
+
   :deep(.ant-space) {
     display: flex;
     gap: 8px;
   }
-  
+
   :deep(.ant-btn) {
     min-width: 120px;
   }
@@ -615,7 +636,7 @@ a-button {
   .search-area :deep(.ant-form-item-label) {
     padding-bottom: 4px;
   }
-  
+
   .search-area :deep(.ant-col) {
     padding-bottom: 8px;
   }

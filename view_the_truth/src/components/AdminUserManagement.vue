@@ -143,11 +143,9 @@
               </a-button>
 
               <!-- 狀態切換按鈕 -->
-              <a-button :type="record.status === 'banned' ? 'danger' : 'success'"
-                size="small"
-                @click="toggleUserStatus(record)"
-                >
-                {{ record.status === 'banned' ? '解封' : '封禁' }}
+              <a-button :type="record.status === '已封禁' ? 'default' : 'default'" :danger="record.status !== '已封禁'"
+                size="small" @click="toggleUserStatus(record)">
+                {{ record.status === '已封禁' ? '解封' : '封禁' }}
               </a-button>
             </a-space>
           </template>
@@ -167,8 +165,8 @@
                 {{ selectedUser.role === 'admin' ? '管理員' : '一般用戶' }}
               </a-descriptions-item>
               <a-descriptions-item label="狀態" :span="3">
-                <a-tag :color="selectedUser.status === 'active' ? 'green' : 'red'">
-                  {{ selectedUser.status === 'active' ? 'normal' : 'banned' }}
+                <a-tag :color="selectedUser.status === '正常' ? 'green' : 'red'">
+                  {{ selectedUser.status === '正常' ? '正常' : '已封禁' }}
                 </a-tag>
               </a-descriptions-item>
               <a-descriptions-item label="註冊時間" :span="3">

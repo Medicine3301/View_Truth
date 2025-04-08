@@ -1,6 +1,0 @@
-/* 確保 Ant Design 的按鈕樣式未被覆蓋 */
-.ant-btn-primary {
-    background-color: #1890ff; /* 預設藍色 */
-    border-color: #1890ff;
-    color: #fff !important; /* 確保按鈕文字顯示為白色 */
-  }

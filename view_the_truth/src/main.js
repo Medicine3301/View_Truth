@@ -10,7 +10,6 @@ import 'vuetify/styles'
 import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
-import TinyVue from '@opentiny/vue'
 const app = createApp(App)
 const pinia = createPinia()
 

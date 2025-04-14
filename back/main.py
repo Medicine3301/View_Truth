@@ -18,8 +18,11 @@ from back.mail import EmailVerifier
 
 app = Sanic("auth_app")
 CORS(app)
-#token
+#token配置
 SECRET_KEY = "therealeyecanseethetruth"
+JWT_ALGORITHM = "HS256" 
+JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)  # 訪問令牌過期時間
+JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)  # 刷新令牌過期時間
 #db資訊
 DB_CONFIG = {
     "host": "127.0.0.1",
@@ -84,7 +87,7 @@ async def register(request):
 
         # 如果驗證成功，繼續註冊流程
         existing_user = await get_user_by_username(app.ctx.pool, data["name"])
-        if existing_user:
+        if (existing_user):
             return json({"error": "用戶名已存在"}, status=400)
 
         uid = str(uuid.uuid4())
@@ -374,49 +377,83 @@ async def post_add(request):
 # 登入路由
 @app.post("/api/login")
 async def login(request):
-    """用戶登入API
-
-    接收：
-    - username: 用戶名
-    - password: 密碼
-    """
     try:
         data = request.json
-        # 查詢用戶
         user = await get_user_by_username(app.ctx.pool, data["username"])
 
         if not user:
             return json({"error": "用戶不存在"}, status=404)
 
-        # 驗證密碼
         if not bcrypt.checkpw(data["password"].encode(), user["passwd"].encode()):
             return json({"error": "密碼錯誤"}, status=401)
 
-        # 生成JWT token
-        token = jwt.encode(
+        # 生成訪問令牌和刷新令牌
+        access_token = jwt.encode(
             {
                 "uid": user["uid"],
-                "exp": datetime.utcnow() + timedelta(days=1),  # token有效期1天
+                "type": "access",
+                "exp": datetime.utcnow() + JWT_ACCESS_TOKEN_EXPIRES
             },
             SECRET_KEY,
-            algorithm="HS256",
+            algorithm=JWT_ALGORITHM
         )
 
-        return json(
+        refresh_token = jwt.encode(
             {
-                "token": token,
-                "user": {
-                    "uid": user["uid"],
-                    "una": user["una"],
-                    "email": user["email"],
-                    "role": user["role"],
-                },
-            }
+                "uid": user["uid"], 
+                "type": "refresh",
+                "exp": datetime.utcnow() + JWT_REFRESH_TOKEN_EXPIRES
+            },
+            SECRET_KEY,
+            algorithm=JWT_ALGORITHM
         )
+
+        return json({
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "user": {
+                "uid": user["uid"],
+                "una": user["una"], 
+                "email": user["email"],
+                "role": user["role"]
+            }
+        })
 
     except Exception as e:
         return json({"error": str(e)}, status=400)
 
+# 新增刷新token的端點
+@app.post("/api/refresh")
+async def refresh_token(request):
+    try:
+        refresh_token = request.headers.get("Authorization", "").replace("Bearer ", "")
+        
+        try:
+            payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=[JWT_ALGORITHM])
+            
+            if payload["type"] != "refresh":
+                return json({"error": "Invalid token type"}, status=400)
+                
+            # 生成新的訪問令牌
+            access_token = jwt.encode(
+                {
+                    "uid": payload["uid"],
+                    "type": "access", 
+                    "exp": datetime.utcnow() + JWT_ACCESS_TOKEN_EXPIRES
+                },
+                SECRET_KEY,
+                algorithm=JWT_ALGORITHM
+            )
+            
+            return json({"access_token": access_token})
+            
+        except jwt.ExpiredSignatureError:
+            return json({"error": "Refresh token expired"}, status=401)
+        except jwt.InvalidTokenError:
+            return json({"error": "Invalid refresh token"}, status=401)
+            
+    except Exception as e:
+        return json({"error": str(e)}, status=400)
 
 # Token驗證路由
 @app.get("/api/verify")

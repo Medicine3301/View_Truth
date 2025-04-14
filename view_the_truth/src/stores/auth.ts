@@ -113,8 +113,14 @@ interface RegisterUserData {
 // 狀態管理
 export const useAuthStore = defineStore('auth', {
     state: (): {
-        userState: UserState; communityState: CommunityState
-        postState: Poststate; newstate: Newstate
+        userState: UserState; 
+        communityState: CommunityState;
+        postState: Poststate; 
+        newstate: Newstate;
+        tokenState: {
+            accessToken: string | null;
+            refreshToken: string | null;
+        }
     } => ({
         userState: {
             user: null,
@@ -140,6 +146,10 @@ export const useAuthStore = defineStore('auth', {
             newsies: null,
             comment: null,
             comments: null
+        },
+        tokenState: {
+            accessToken: localStorage.getItem('accessToken'),
+            refreshToken: localStorage.getItem('refreshToken')
         }
     }),
     getters: {
@@ -158,7 +168,11 @@ export const useAuthStore = defineStore('auth', {
                 if (response.status === 200) {
                     this.userState.user = response.data.user;
                     this.userState.isAuthenticated = true;
-                    localStorage.setItem('token', response.data.token);
+                    
+                    // 同時儲存 token 和 tokens
+                    localStorage.setItem('token', response.data.access_token);
+                    this.setTokens(response.data.access_token, response.data.refresh_token);
+                    
                     notification.success({
                         message: '登入成功',
                         description: '歡迎回來！',
@@ -205,7 +219,11 @@ export const useAuthStore = defineStore('auth', {
         logout() {
             this.userState.user = null;
             this.userState.isAuthenticated = false;
-            localStorage.removeItem('token');
+            this.tokenState.accessToken = null;
+            this.tokenState.refreshToken = null;
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('token'); // 新增這行
             notification.info({
                 message: '已登出',
                 description: '您已成功登出系統',
@@ -214,10 +232,10 @@ export const useAuthStore = defineStore('auth', {
         },
 
         async checkAuth() {
-            const token = localStorage.getItem('token');
+            const token = localStorage.getItem('token') || this.tokenState.accessToken;
             if (!token) {
                 this.logout();
-                return;
+                return false;
             }
 
             try {
@@ -230,21 +248,14 @@ export const useAuthStore = defineStore('auth', {
                 if (response.status === 200) {
                     this.userState.user = response.data.user;
                     this.userState.isAuthenticated = true;
+                    return true;
                 } else {
                     this.logout();
-                    notification.warn({
-                        message: '會話過期',
-                        description: '請重新登入',
-                        duration: 3
-                    });
+                    return false;
                 }
             } catch (error) {
                 this.logout();
-                notification.error({
-                    message: '驗證失敗',
-                    description: '請重新登入系統',
-                    duration: 3
-                });
+                return false;
             }
         },
         //獲取用戶列表(後台)
@@ -538,12 +549,52 @@ export const useAuthStore = defineStore('auth', {
                 });
             }
         },
+        setTokens(accessToken: string, refreshToken: string) {
+            this.tokenState.accessToken = accessToken;
+            this.tokenState.refreshToken = refreshToken;
+            localStorage.setItem('accessToken', accessToken);
+            localStorage.setItem('refreshToken', refreshToken);
+        },
+
+        async refreshToken() {
+            try {
+                const response = await axios.post('http://localhost:8000/api/refresh', null, {
+                    headers: {
+                        Authorization: `Bearer ${this.tokenState.refreshToken}`
+                    }
+                });
+                
+                if (response.status === 200) {
+                    this.tokenState.accessToken = response.data.access_token;
+                    localStorage.setItem('accessToken', response.data.access_token);
+                    return true;
+                }
+                return false;
+            } catch (error) {
+                this.logout();
+                return false;
+            }
+        },
+
         setupAxiosInterceptors() {
+            let isRefreshing = false;
+            let failedQueue: any[] = [];
+
+            const processQueue = (error: any, token: string | null = null) => {
+                failedQueue.forEach(prom => {
+                    if (error) {
+                        prom.reject(error);
+                    } else {
+                        prom.resolve(token);
+                    }
+                });
+                failedQueue = [];
+            };
+
             axios.interceptors.request.use(
                 config => {
-                    const token = localStorage.getItem('token');
-                    if (token) {
-                        config.headers.Authorization = `Bearer ${token}`;
+                    if (this.tokenState.accessToken) {
+                        config.headers.Authorization = `Bearer ${this.tokenState.accessToken}`;
                     }
                     return config;
                 },
@@ -554,14 +605,40 @@ export const useAuthStore = defineStore('auth', {
 
             axios.interceptors.response.use(
                 response => response,
-                error => {
-                    if (error.response?.status === 401) {
-                        this.logout();
-                        notification.error({
-                            message: '會話過期',
-                            description: '請重新登入系統',
-                            duration: 3
-                        });
+                async error => {
+                    const originalRequest = error.config;
+
+                    if (error.response?.status === 401 && !originalRequest._retry) {
+                        if (isRefreshing) {
+                            return new Promise((resolve, reject) => {
+                                failedQueue.push({ resolve, reject });
+                            })
+                            .then(token => {
+                                originalRequest.headers.Authorization = `Bearer ${token}`;
+                                return axios(originalRequest);
+                            })
+                            .catch(err => Promise.reject(err));
+                        }
+
+                        originalRequest._retry = true;
+                        isRefreshing = true;
+
+                        try {
+                            const refreshed = await this.refreshToken();
+                            if (refreshed) {
+                                processQueue(null, this.tokenState.accessToken);
+                                originalRequest.headers.Authorization = `Bearer ${this.tokenState.accessToken}`;
+                                return axios(originalRequest);
+                            } else {
+                                processQueue(new Error('Refresh failed'));
+                                return Promise.reject(error);
+                            }
+                        } catch (refreshError) {
+                            processQueue(refreshError);
+                            return Promise.reject(refreshError);
+                        } finally {
+                            isRefreshing = false;
+                        }
                     }
                     return Promise.reject(error);
                 }

@@ -38,19 +38,19 @@ const routes = [
         path: '/userprofile/:id', 
         component: Userprofile, 
         name: 'userprofile',
-        meta: { requiresAuth: true }
+        meta: { requiresAuth: false}
     },
     { 
         path: '/community/:id', 
         component: Community, 
         name: 'community',
-        meta: { requiresAuth: true }
+        meta: { requiresAuth: false }
     },
     { 
         path: '/post/:id', 
         component: Post, 
         name: 'post',
-        meta: { requiresAuth: true }
+        meta: { requiresAuth: false }
     },
     { 
         path: '/adminusermanagement', 

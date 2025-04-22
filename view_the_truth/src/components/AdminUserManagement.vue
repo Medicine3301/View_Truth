@@ -130,7 +130,7 @@
 
           <!-- 用戶狀態列 -->
           <template #status="{ text }">
-            <a-tag :color="text === '正常' ? 'green' : text === '已封禁' ? 'red' : 'gray'">
+            <a-tag :color="text === '正常' ? 'green' : 'red'">
               {{ text }}
             </a-tag>
           </template>
@@ -143,8 +143,11 @@
               </a-button>
 
               <!-- 狀態切換按鈕 -->
-              <a-button :type="record.status === '已封禁' ? 'default' : 'default'" :danger="record.status !== '已封禁'"
-                size="small" @click="toggleUserStatus(record)">
+              <a-button 
+                type="default"
+                :danger="record.status === '正常'"
+                size="small" 
+                @click="toggleUserStatus(record)">
                 {{ record.status === '已封禁' ? '解封' : '封禁' }}
               </a-button>
             </a-space>
@@ -364,11 +367,14 @@ const closeDrawer = () => {
 // 切換用戶狀態（封禁/解封）
 const toggleUserStatus = async (user: any) => {
   try {
-    await authStore.updateUserStatus(user.id, user.status === 'active' ? 'banned' : 'active');
-    message.success('操作成功');
-    loadUsers();
+    const newStatus = user.status === '正常' ? 'banned' : 'normal';
+    const success = await authStore.updateUserStatus(user.key, newStatus);
+    if (success) {
+      // 重新加載用戶列表
+      await loadUsers();
+    }
   } catch (error) {
-    message.error('操作失敗');
+    message.error('狀態更新失敗');
   }
 };
 
@@ -385,6 +391,7 @@ const viewPost = (post: any) => {
 // 初始化
 onMounted(() => {
   loadUsers();
+  loadStatistics(); // 添加這行
 });
 
 // 新增統計數據
@@ -394,6 +401,21 @@ const statistics = ref({
   pendingReports: 0,
   todayActiveUsers: 0
 });
+
+// 新增加載統計數據的方法
+const loadStatistics = async () => {
+  try {
+    const stats = await authStore.fetchUserStatistics();
+    statistics.value = {
+      totalUsers: stats.totalUsers,
+      monthlyNewUsers: stats.monthlyNewUsers,
+      pendingReports: stats.pendingReports,
+      todayActiveUsers: stats.todayActiveUsers
+    };
+  } catch (error) {
+    console.error('Failed to load statistics:', error);
+  }
+};
 
 // 視圖模式
 const viewMode = ref('table');
@@ -450,15 +472,19 @@ const exportUsers = async () => {
 };
 
 const batchBanUsers = async () => {
+  if (!selectedRowKeys.value.length) {
+    message.warning('請先選擇要操作的用戶');
+    return;
+  }
+
   try {
-    await Promise.all(
-      selectedRowKeys.value.map(uid =>
-        authStore.updateUserStatus(uid, 'banned')
-      )
-    );
-    message.success('批量操作成功');
-    loadUsers();
-    selectedRowKeys.value = [];
+    const success = await authStore.batchUpdateUserStatus(selectedRowKeys.value, 'banned');
+    if (success) {
+      // 清空選中狀態
+      selectedRowKeys.value = [];
+      // 重新加載用戶列表
+      await loadUsers();
+    }
   } catch (error) {
     message.error('批量操作失敗');
   }

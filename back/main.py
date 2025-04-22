@@ -662,9 +662,14 @@ async def get_all_post(request, cid):
         async with app.ctx.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 await cur.execute(
-                    "SELECT pid, cid, uid, una,title,content,comm_count,crea_date FROM post where cid=%s",
-                    (cid,),
-                ),
+                    """
+                    SELECT pid, cid, uid, una, title, content, comm_count, 
+                           crea_date, rate_sc, favorite 
+                    FROM post 
+                    WHERE cid = %s
+                    """,
+                    (cid,)
+                )
                 posts = await cur.fetchall()
 
                 if not posts:
@@ -680,9 +685,9 @@ async def get_all_post(request, cid):
                         "title": post["title"],
                         "content": post["content"],
                         "comm_count": post["comm_count"],
-                        "crea_date": (
-                            post["crea_date"].isoformat() if post["crea_date"] else None
-                        ),
+                        "rate_sc": float(post["rate_sc"]) if post["rate_sc"] else 0,
+                        "favorite": int(post["favorite"]) if post["favorite"] else 0,
+                        "crea_date": post["crea_date"].isoformat() if post["crea_date"] else None,
                     }
                     for post in posts
                 ]
@@ -887,7 +892,7 @@ async def post_comment_update(request, pid):
     except Exception as e:
         return json({"error": f"服務器錯誤: {str(e)}"}, status=500)
 #user 統計數據獲取
-@app.get("/api/user_statistics/overview")
+@app.get("/api/users/statistics")
 async def get_statistics_overview(request):
     try:
         async with app.ctx.pool.acquire() as conn:
@@ -1066,6 +1071,61 @@ async def get_users(request):
     except Exception as e:
         return json({"error": f"服務器錯誤: {str(e)}"}, status=500)
 
+# 單個用戶封禁/解封
+@app.put("/api/user/status")
+async def update_user_status(request):
+    try:
+        data = request.json
+        required_fields = ["uid", "status"]
+        if not all(key in data for key in required_fields):
+            return json({"error": "缺少必要欄位"}, status=400)
+
+        async with app.ctx.pool.acquire() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(
+                    """
+                    UPDATE user_statistics 
+                    SET status = %s 
+                    WHERE uid = %s
+                    """,
+                    (data["status"], data["uid"])
+                )
+
+        return json({
+            "message": "用戶狀態更新成功",
+            "status": data["status"]
+        }, status=200)
+
+    except Exception as e:
+        return json({"error": f"服務器錯誤: {str(e)}"}, status=500)
+
+# 批量封禁
+@app.put("/api/users/batch-status")
+async def batch_update_user_status(request):
+    try:
+        data = request.json
+        if not data.get("uids") or not data.get("status"):
+            return json({"error": "缺少必要欄位"}, status=400)
+
+        async with app.ctx.pool.acquire() as conn:
+            async with conn.cursor() as cur:
+                for uid in data["uids"]:
+                    await cur.execute(
+                        """
+                        UPDATE user_statistics 
+                        SET status = %s 
+                        WHERE uid = %s
+                        """,
+                        (data["status"], uid)
+                    )
+
+        return json({
+            "message": "批量更新用戶狀態成功",
+            "affected": len(data["uids"])
+        }, status=200)
+
+    except Exception as e:
+        return json({"error": f"服務器錯誤: {str(e)}"}, status=500)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000)

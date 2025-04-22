@@ -32,10 +32,20 @@
                   <div class="post-footer">
                     <a-avatar size="small" class="user-avatar">{{ post.una.charAt(0) }}</a-avatar>
                     <span class="user-name">{{ post.una }}</span>
-                    <!-- 添加留言圖標和留言數 -->
-                    <div class="comment-icon">
-                      <MessageOutlined />
-                      <span class="comment-count">{{ post.comm_count }}</span>
+                    <!-- 添加評分和收藏數顯示 -->
+                    <div class="post-stats">
+                      <div class="stat-item">
+                        <StarOutlined />
+                        <span class="stat-count">{{ post.rate_sc || '0' }}</span>
+                      </div>
+                      <div class="stat-item">
+                        <HeartOutlined />
+                        <span class="stat-count">{{ post.favorite || '0' }}</span>
+                      </div>
+                      <div class="comment-icon">
+                        <MessageOutlined />
+                        <span class="comment-count">{{ post.comm_count }}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -85,7 +95,7 @@ import { useAuthStore } from '../stores/auth'
 import Sidebar from '../layout/sidebar.vue'
 import Header from '../layout/header.vue'
 import { message } from 'ant-design-vue'
-import { MessageOutlined } from '@ant-design/icons-vue'
+import { StarOutlined, HeartOutlined, MessageOutlined } from '@ant-design/icons-vue'
 import axios from 'axios'
 import Editor from '@tinymce/tinymce-vue'
 
@@ -373,5 +383,23 @@ onMounted(async () => {
 .comment-count {
   font-size: 14px;
   color: #666;
+}
+
+.post-stats {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  gap: 16px;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #666;
+}
+
+.stat-count {
+  font-size: 14px;
 }
 </style>

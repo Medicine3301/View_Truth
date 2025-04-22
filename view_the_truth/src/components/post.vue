@@ -10,16 +10,42 @@
             <a-card class="post-card" :bordered="false">
               <template #title>
                 <div class="post-header">
-                  <h2 class="post-title">{{ post.title }}</h2>
-                  <div class="post-meta">
-                    <a-avatar class="avatar" size="small" @click="goToUserProfile(post.uid)">
-                      {{ post.una.charAt(0) }}
-                    </a-avatar>
-                    <span class="author-name">{{ post.una }}</span>
-                    <span class="post-time">{{ formatDate(post.crea_date) }}</span>
-                    <a-rate v-model:value="rate_sc" @click="Rate_sc_btn" />
-                    <FormOutlined class="edit-icon" @click="showEditModal" v-if="canEdit" />
-                    <HeartOutlined :class="{ 'favorite-icon-active': isFavorited }" @click="toggleFavorite" />
+                  <div class="post-main-info">
+                    <h2 class="post-title">{{ post.title }}</h2>
+                    <div class="post-meta">
+                      <a-avatar class="avatar" size="small" @click="goToUserProfile(post.uid)">
+                        {{ post.una.charAt(0) }}
+                      </a-avatar>
+                      <span class="author-name">{{ post.una }}</span>
+                      <span class="divider">·</span>
+                      <span class="post-time">{{ formatDate(post.crea_date) }}</span>
+                    </div>
+                  </div>
+                  <div class="post-actions">
+                    <div class="action-group">
+                      <span class="action-label">評分</span>
+                      <a-rate v-model:value="rate_sc" @click="Rate_sc_btn" />
+                    </div>
+                    <div class="action-buttons">
+                      <a-button 
+                        type="text"
+                        class="action-btn"
+                        :class="{ 'favorite-active': isFavorited }"
+                        @click="toggleFavorite"
+                      >
+                        <HeartOutlined />
+                        <span>{{ isFavorited ? '已收藏' : '收藏' }}</span>
+                      </a-button>
+                      <a-button 
+                        v-if="canEdit"
+                        type="text"
+                        class="action-btn"
+                        @click="showEditModal"
+                      >
+                        <FormOutlined />
+                        <span>編輯</span>
+                      </a-button>
+                    </div>
                   </div>
                 </div>
               </template>
@@ -450,39 +476,108 @@ onMounted(async () => {
 <style scoped>
 .post-card {
   margin-bottom: 24px;
-}
-
-.comment-card {
-  margin-bottom: 24px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .post-header {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  padding: 16px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.post-main-info {
+  margin-bottom: 16px;
 }
 
 .post-title {
-  color: #1890ff;
-  margin: 0;
-  font-size: 24px;
+  font-size: 28px;
+  font-weight: 600;
+  color: #262626;
+  margin-bottom: 12px;
+  line-height: 1.4;
 }
 
 .post-meta {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #666;
+  color: #595959;
 }
 
 .author-name {
-  font-size: 14px;
-  margin-left: 8px;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.divider {
+  color: #d9d9d9;
 }
 
 .post-time {
+  color: #8c8c8c;
+}
+
+.post-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.action-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.action-label {
   font-size: 14px;
-  color: #999;
+  color: #595959;
+}
+
+:deep(.ant-rate) {
+  font-size: 20px;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 16px;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  padding: 4px 12px;
+  border-radius: 4px;
+  transition: all 0.3s;
+}
+
+.action-btn:hover {
+  background: #f5f5f5;
+}
+
+.favorite-active {
+  color: #ff4d4f;
+}
+
+.favorite-active:hover {
+  background: #fff1f0;
+}
+
+.avatar {
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.avatar:hover {
+  transform: scale(1.05);
+}
+
+.comment-card {
+  margin-bottom: 24px;
 }
 
 .post-content {

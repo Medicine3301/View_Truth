@@ -78,9 +78,15 @@
                       <a-space>
                         <a-button type="link">
                           <template #icon>
-                            <LikeOutlined />
+                            <HeartOutlined />
                           </template>
-                          {{ item.likes || 0 }}
+                          {{ item.favorites || 0 }}
+                        </a-button>
+                        <a-button type="link">
+                          <template #icon>
+                            <StarOutlined />
+                          </template>
+                          {{ item.score || 0 }}分
                         </a-button>
                         <a-button type="link">
                           <template #icon>
@@ -134,6 +140,28 @@
                 :data-source="userFavorites">
                 <template #renderItem="{ item }">
                   <a-list-item class="post-list-item" @click="goToPost(item.pid)" style="cursor: pointer;">
+                    <template #actions>
+                      <a-space>
+                        <a-button type="link">
+                          <template #icon>
+                            <HeartOutlined />
+                          </template>
+                          {{ item.favorites || 0 }}
+                        </a-button>
+                        <a-button type="link">
+                          <template #icon>
+                            <StarOutlined />
+                          </template>
+                          {{ item.score || 0 }}分
+                        </a-button>
+                        <a-button type="link">
+                          <template #icon>
+                            <MessageOutlined />
+                          </template>
+                          {{ item.comm_count || 0 }}
+                        </a-button>
+                      </a-space>
+                    </template>
                     <a-list-item-meta :title="item.title" :description="formatDate(item.crea_date)">
                       <template #avatar>
                         <a-avatar :src="otherUser?.avatar">
@@ -165,6 +193,7 @@ import { message } from 'ant-design-vue';
 import { useAuthStore } from '../stores/auth';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
+import { HeartOutlined, StarOutlined, MessageOutlined } from '@ant-design/icons-vue';
 
 const authStore = useAuthStore();
 const route = useRoute();

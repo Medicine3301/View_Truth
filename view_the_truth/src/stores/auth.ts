@@ -44,6 +44,12 @@ interface UserState {
         reg_date: string
         status: string
     }[] | null
+    statistics: {
+        totalUsers: number
+        monthlyNewUsers: number
+        pendingReports: number
+        todayActiveUsers: number
+    } | null
 }
 
 interface Community {
@@ -62,6 +68,8 @@ interface post {
     content: string
     comm_count: string
     crea_date: string
+    rate_sc: number
+    favorite: number
 }
 interface comment {
     pid: string
@@ -127,7 +135,8 @@ export const useAuthStore = defineStore('auth', {
             isAuthenticated: false,
             otherUser: null,
             otherUsers: null,
-            Getuser: null
+            Getuser: null,
+            statistics: null
         },
         communityState: {
             community: null,
@@ -643,6 +652,71 @@ export const useAuthStore = defineStore('auth', {
                     return Promise.reject(error);
                 }
             );
+        },
+
+        async updateUserStatus(uid: string, status: string) {
+            try {
+                const response = await axios.put('http://localhost:8000/api/user/status', {
+                    uid,
+                    status
+                });
+                
+                if (response.status === 200) {
+                    notification.success({
+                        message: '狀態更新成功',
+                        description: `用戶狀態已更新為 ${status === 'banned' ? '已封禁' : '正常'}`
+                    });
+                    return true;
+                }
+                return false;
+            } catch (error: any) {
+                notification.error({
+                    message: '狀態更新失敗',
+                    description: error.response?.data?.error || '操作失敗，請稍後再試'
+                });
+                return false;
+            }
+        },
+
+        async batchUpdateUserStatus(uids: string[], status: string) {
+            try {
+                const response = await axios.put('http://localhost:8000/api/users/batch-status', {
+                    uids,
+                    status
+                });
+                
+                if (response.status === 200) {
+                    notification.success({
+                        message: '批量操作成功',
+                        description: `已成功更新 ${response.data.affected} 個用戶的狀態`
+                    });
+                    return true;
+                }
+                return false;
+            } catch (error: any) {
+                notification.error({
+                    message: '批量操作失敗',
+                    description: error.response?.data?.error || '操作失敗，請稍後再試'
+                });
+                return false;
+            }
+        },
+
+        async fetchUserStatistics() {
+            try {
+                const response = await axios.get('http://localhost:8000/api/users/statistics');
+                if (response.status === 200) {
+                    return response.data;
+                }
+                throw new Error('Failed to fetch statistics');
+            } catch (error: any) {
+                notification.error({
+                    message: '獲取統計數據失敗',
+                    description: error.response?.data?.error || '請稍後再試',
+                    duration: 3
+                });
+                throw error;
+            }
         }
     }
 });

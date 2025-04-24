@@ -70,10 +70,6 @@
             <a-card class="comment-card" :bordered="false" title="評論">
               <div class="comment-form">
                 <a-form :model="commentForm" @finish="handleCommentSubmit">
-                  <a-form-item name="title" :rules="[{ required: true, message: '請輸入標題' }]">
-                    <a-textarea v-model:value="commentForm.title" :rows="1" placeholder="寫下你的標題..."
-                      :disabled="!postStore.userState.isAuthenticated" />
-                  </a-form-item>
                   <a-form-item name="content" :rules="[{ required: true, message: '請輸入評論內容' }]">
                     <a-textarea v-model:value="commentForm.content" :rows="4" placeholder="寫下你的評論..."
                       :disabled="!postStore.userState.isAuthenticated" />
@@ -101,7 +97,6 @@
                       <span class="comment-time">{{ formatDate(comment.crea_date) }}</span>
                     </div>
                     <div class="comment-content">
-                      <h4>{{ comment.title }}</h4>
                       {{ comment.content }}
                     </div>
                   </div>
@@ -140,8 +135,7 @@ const submitting = ref<boolean>(false);
 
 // 評論表單
 const commentForm = reactive({
-  content: '',
-  title: ''
+  content: ''
 });
 
 // 編輯相關
@@ -362,13 +356,11 @@ const handleCommentSubmit = async () => {
       uid: postStore.userState.user?.uid,
       una: postStore.userState.user?.una,
       pid: route.params.id,
-      title: commentForm.title,
       content: commentForm.content
     });
 
     if (response.status === 201) {
       message.success('評論發表成功');
-      commentForm.title = '';
       commentForm.content = '';
       await postStore.getAllComments(route.params.id as string);
     }

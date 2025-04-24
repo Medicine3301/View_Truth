@@ -160,7 +160,8 @@ async def send_verification_code(request):
 async def post_comment_add(request):
     try:
         data = request.json
-        required_fields = ["pid", "title", "uid", "una", "content"]
+        # 移除 title 從必要欄位
+        required_fields = ["pid", "uid", "una", "content"] 
         if not all(key in data for key in required_fields):
             return json({"error": "缺少必要欄位"}, status=400)
 
@@ -171,13 +172,11 @@ async def post_comment_add(request):
             async with conn.cursor() as cur:
                 await cur.execute(
                     """
-                    INSERT INTO comments (pid, title, comm_id, uid, una, content)
-                    VALUES (%s, %s, %s, %s, %s, %s)
+                    INSERT INTO comments (pid, comm_id, uid, una, content)
+                    VALUES (%s, %s, %s, %s, %s)
                     """,
-                    (data["pid"], data["title"], next_id, 
-                     data["uid"], data["una"], data["content"])
+                    (data["pid"], next_id, data["uid"], data["una"], data["content"])
                 )
-                
 
         return json({
             "message": "留言成功",

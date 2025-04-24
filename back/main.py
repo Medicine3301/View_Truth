@@ -160,8 +160,7 @@ async def send_verification_code(request):
 async def post_comment_add(request):
     try:
         data = request.json
-        # 移除 title 從必要欄位
-        required_fields = ["pid", "uid", "una", "content"] 
+        required_fields = ["pid", "uid", "una", "content", "parent_id"]
         if not all(key in data for key in required_fields):
             return json({"error": "缺少必要欄位"}, status=400)
 
@@ -172,10 +171,11 @@ async def post_comment_add(request):
             async with conn.cursor() as cur:
                 await cur.execute(
                     """
-                    INSERT INTO comments (pid, comm_id, uid, una, content)
-                    VALUES (%s, %s, %s, %s, %s)
+                    INSERT INTO comments (pid, comm_id, uid, una, content, parent_id)
+                    VALUES (%s, %s, %s, %s, %s, %s)
                     """,
-                    (data["pid"], next_id, data["uid"], data["una"], data["content"])
+                    (data["pid"], next_id, data["uid"], data["una"], 
+                     data["content"], data["parent_id"])
                 )
 
         return json({
@@ -185,6 +185,49 @@ async def post_comment_add(request):
 
     except Exception as e:
         return json({"error": f"服務器錯誤: {str(e)}"}, status=500)
+
+# 修改貼文評論的獲取API以支援巢狀結構
+@app.get("/api/comment/<pid>")
+async def get_all_comment(request, pid):
+    """獲取所有貼文留言信息的 API"""
+    try:
+        async with app.ctx.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute(
+                    """
+                    SELECT uid, una, comm_id, pid, content, crea_date, parent_id 
+                    FROM comments 
+                    WHERE pid = %s 
+                    ORDER BY parent_id ASC, crea_date ASC
+                    """,
+                    (pid,)
+                )
+                comments = await cur.fetchall()
+                
+                # Convert datetime objects to ISO format strings
+                for comment in comments:
+                    if comment['crea_date']:
+                        comment['crea_date'] = comment['crea_date'].isoformat()
+
+                # Process the rest of the function...
+                comment_dict = {}
+                root_comments = []
+
+                for comment in comments:
+                    comment['children'] = []
+                    comment_dict[comment['comm_id']] = comment
+                    
+                    if not comment['parent_id']:
+                        root_comments.append(comment)
+                    else:
+                        parent = comment_dict.get(comment['parent_id'])
+                        if parent:
+                            parent['children'].append(comment)
+
+                return json({"comments": root_comments}, status=200)
+    except Exception as e:
+        print(f"Error in get_all_comments: {str(e)}")
+        return json({"error": str(e)}, status=400)
 
 #收藏新增
 @app.post("/api/favorites/add")
@@ -723,79 +766,49 @@ async def get_post_info(request, pid):
         print(f"Error in get_post_info: {str(e)}")
         return json({"error": str(e)}, status=400)
 
-
-@app.get("/api/comment/<pid>")
-async def get_all_comment(request, pid):
-    """獲取所有貼文留言信息的 API"""
-    try:
-        async with app.ctx.pool.acquire() as conn:
-            async with conn.cursor(aiomysql.DictCursor) as cur:
-                await cur.execute(
-                    "SELECT pid,uid,una,comm_id,nid,title,content,crea_date FROM comments where pid=%s",
-                    (pid,),
-                ),
-                comments = await cur.fetchall()
-
-
-                # 處理每個留言的數據
-                response = [
-                    {
-                        "pid": comment["pid"],
-                        "uid": comment["uid"],
-                        "una": comment["una"],
-                        "comm_id": comment["comm_id"],
-                        "nid": comment["nid"],
-                        "title": comment["title"],
-                        "content": comment["content"],
-                        "crea_date": (
-                            comment["crea_date"].isoformat()
-                            if comment["crea_date"]
-                            else None
-                        ),
-                    }
-                    for comment in comments
-                ]
-
-                return json({"comments": response}, status=200)
-    except Exception as e:
-        print(f"Error in get_all_comments: {str(e)}")
-        return json({"error": str(e)}, status=400)
     
 @app.get("/api/ncomment/<nid>")
 async def get_all_ncomment(request, nid):
-    """獲取所有貼文留言信息的 API"""
+    """獲取所有新聞留言信息的 API"""
     try:
         async with app.ctx.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 await cur.execute(
-                    "SELECT uid,una,comm_id,nid,title,content,crea_date FROM comments where nid=%s",
-                    (nid,),
-                ),
+                    """
+                    SELECT uid, una, comm_id, nid, content, crea_date, parent_id 
+                    FROM comments 
+                    WHERE nid = %s 
+                    ORDER BY parent_id ASC, crea_date ASC
+                    """,
+                    (nid,)
+                )
                 comments = await cur.fetchall()
+                
+                # Convert datetime objects to ISO format strings
+                for comment in comments:
+                    if comment['crea_date']:
+                        comment['crea_date'] = comment['crea_date'].isoformat()
 
+                # 處理巢狀結構
+                comment_dict = {}
+                root_comments = []
 
-                # 處理每個留言的數據
-                response = [
-                    {
-                        "uid": comment["uid"],
-                        "una": comment["una"],
-                        "comm_id": comment["comm_id"],
-                        "nid": comment["nid"],
-                        "title": comment["title"],
-                        "content": comment["content"],
-                        "crea_date": (
-                            comment["crea_date"].isoformat()
-                            if comment["crea_date"]
-                            else None
-                        ),
-                    }
-                    for comment in comments
-                ]
+                for comment in comments:
+                    comment['children'] = []
+                    comment_dict[comment['comm_id']] = comment
+                    
+                    if not comment['parent_id']:
+                        root_comments.append(comment)
+                    else:
+                        parent = comment_dict.get(comment['parent_id'])
+                        if parent:
+                            parent['children'].append(comment)
 
-                return json({"comments": response}, status=200)
+                return json({"comments": root_comments}, status=200)
     except Exception as e:
         print(f"Error in get_all_comments: {str(e)}")
         return json({"error": str(e)}, status=400)
+
 @app.get("/api/news/all")
 async def get_all_news(request):
     """獲取所有新聞信息的 API"""
@@ -1122,6 +1135,36 @@ async def batch_update_user_status(request):
             "message": "批量更新用戶狀態成功",
             "affected": len(data["uids"])
         }, status=200)
+
+    except Exception as e:
+        return json({"error": f"服務器錯誤: {str(e)}"}, status=500)
+
+@app.post("/api/news/comment/create")
+async def news_comment_add(request):
+    try:
+        data = request.json
+        required_fields = ["nid", "uid", "una", "content", "parent_id"]
+        if not all(key in data for key in required_fields):
+            return json({"error": "缺少必要欄位"}, status=400)
+
+        latest_id = await get_latest_ncomm_id(app.ctx.pool)
+        next_id = f"RN{latest_id + 1}"
+
+        async with app.ctx.pool.acquire() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(
+                    """
+                    INSERT INTO comments (nid, comm_id, uid, una, content, parent_id)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    """,
+                    (data["nid"], next_id, data["uid"], data["una"], 
+                     data["content"], data["parent_id"])
+                )
+
+        return json({
+            "message": "留言成功",
+            "comm_id": next_id
+        }, status=201)
 
     except Exception as e:
         return json({"error": f"服務器錯誤: {str(e)}"}, status=500)

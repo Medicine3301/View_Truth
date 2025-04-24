@@ -72,14 +72,15 @@ interface post {
     favorite: number
 }
 interface comment {
-    pid: string
+    pid?: string
+    nid?: string
     comm_id: string
     uid: string
     una: string
-    title: string
     content: string
     crea_date: string
-    nid: string
+    parent_id?: string
+    children?: comment[]
 }
 interface CommunityState {
     community: Community | null

@@ -71,35 +71,77 @@
               <div class="comment-form">
                 <a-form :model="commentForm" @finish="handleCommentSubmit">
                   <a-form-item name="content" :rules="[{ required: true, message: '請輸入評論內容' }]">
-                    <a-textarea v-model:value="commentForm.content" :rows="4" placeholder="寫下你的評論..."
-                      :disabled="!postStore.userState.isAuthenticated" />
+                    <a-textarea 
+                      v-model:value="commentForm.content" 
+                      :rows="4" 
+                      placeholder="寫下你的評論..."
+                      :disabled="!postStore.userState.isAuthenticated" 
+                    />
                   </a-form-item>
                   <a-form-item>
-                    <a-button type="primary" html-type="submit" :loading="submitting"
-                      :disabled="!postStore.userState.isAuthenticated">
+                    <a-button 
+                      type="primary" 
+                      html-type="submit" 
+                      :loading="submitting"
+                      :disabled="!postStore.userState.isAuthenticated"
+                    >
                       發表評論
                     </a-button>
                   </a-form-item>
                 </a-form>
               </div>
 
-              <!-- 評論列表 -->
+              <!-- 巢狀評論列表 -->
               <div class="comments-list">
                 <template v-if="comments && comments.length > 0">
-                  <div v-for="comment in comments" :key="comment.comm_id" class="comment-item">
-                    <div class="comment-header">
-                      <div class="comment-user">
-                        <a-avatar class="avatar" size="small" @click="goToUserProfile(comment.uid)">
-                          {{ comment.una.charAt(0) }}
-                        </a-avatar>
-                        <span class="comment-author">{{ comment.una }}</span>
+                  <a-comment v-for="comment in comments" :key="comment.comm_id">
+                    <template #actions>
+                      <span @click="handleReplyClick(comment)">回覆</span>
+                    </template>
+                    <template #author>{{ comment.una }}</template>
+                    <template #avatar>
+                      <a-avatar @click="goToUserProfile(comment.uid)">{{ comment.una.charAt(0) }}</a-avatar>
+                    </template>
+                    <template #content>
+                      <p>{{ comment.content }}</p>
+                    </template>
+                    <template #datetime>
+                      <span>{{ formatDate(comment.crea_date) }}</span>
+                    </template>
+
+                    <!-- 回覆表單 -->
+                    <div v-if="activeReplyId === comment.comm_id" class="reply-form">
+                      <a-textarea
+                        v-model:value="replyContent"
+                        :rows="3"
+                        :placeholder="`回覆 ${comment.una}...`"
+                      />
+                      <div class="reply-actions">
+                        <a-button type="primary" size="small" @click="submitReply(comment)">發送</a-button>
+                        <a-button size="small" @click="cancelReply">取消</a-button>
                       </div>
-                      <span class="comment-time">{{ formatDate(comment.crea_date) }}</span>
                     </div>
-                    <div class="comment-content">
-                      {{ comment.content }}
-                    </div>
-                  </div>
+
+                    <!-- 巢狀回覆 -->
+                    <template v-if="comment.children && comment.children.length > 0">
+                      <a-comment
+                        v-for="reply in comment.children"
+                        :key="reply.comm_id"
+                        class="nested-comment"
+                      >
+                        <template #author>{{ reply.una }}</template>
+                        <template #avatar>
+                          <a-avatar @click="goToUserProfile(reply.uid)">{{ reply.una.charAt(0) }}</a-avatar>
+                        </template>
+                        <template #content>
+                          <p>{{ reply.content }}</p>
+                        </template>
+                        <template #datetime>
+                          <span>{{ formatDate(reply.crea_date) }}</span>
+                        </template>
+                      </a-comment>
+                    </template>
+                  </a-comment>
                 </template>
                 <a-empty v-else description="暫無評論" />
               </div>
@@ -116,8 +158,9 @@
 </template>
 
 <script lang="ts" setup>
+import { createApp } from 'vue';
 import { useAuthStore } from '../stores/auth';
-import { onMounted, computed, ref, reactive, nextTick } from 'vue';
+import { onMounted, computed, ref, reactive, nextTick, defineComponent, PropType } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Sidebar from '../layout/sidebar.vue';
 import Header from '../layout/header.vue';
@@ -344,6 +387,17 @@ const handleEditSubmit = async () => {
   }
 };
 
+const replyTo = ref<any>(null);
+
+const handleReply = (comment: any) => {
+  replyTo.value = comment;
+};
+
+const cancelReply = () => {
+  replyTo.value = null;
+  commentForm.content = '';
+};
+
 const handleCommentSubmit = async () => {
   if (!postStore.userState.isAuthenticated) {
     message.warning('請先登入後再發表評論');
@@ -356,12 +410,14 @@ const handleCommentSubmit = async () => {
       uid: postStore.userState.user?.uid,
       una: postStore.userState.user?.una,
       pid: route.params.id,
-      content: commentForm.content
+      content: commentForm.content,
+      parent_id: replyTo.value?.comm_id || null
     });
 
     if (response.status === 201) {
-      message.success('評論發表成功');
+      message.success(replyTo.value ? '回覆成功' : '評論發表成功');
       commentForm.content = '';
+      replyTo.value = null;
       await postStore.getAllComments(route.params.id as string);
     }
   } catch (error: any) {
@@ -370,6 +426,7 @@ const handleCommentSubmit = async () => {
     submitting.value = false;
   }
 };
+
 const rate_sc = ref<number>();
 //評分
 const Rate_sc_btn = async () => {
@@ -463,6 +520,151 @@ onMounted(async () => {
   }
 
 });
+
+const CommentTree = defineComponent({
+  name: 'CommentTree',
+  props: {
+    comments: {
+      type: Array as PropType<any[]>,
+      required: true
+    },
+    level: {
+      type: Number,
+      default: 0
+    }
+  },
+  template: `
+    <div class="comments-tree">
+      <div v-for="comment in comments" :key="comment.comm_id" :class="['comment-item', 'level-' + level]">
+        <div class="comment-main">
+          <div class="comment-header">
+            <div class="comment-user">
+              <a-avatar class="avatar" size="small" @click="$emit('userClick', comment.uid)">
+                {{ comment.una.charAt(0) }}
+              </a-avatar>
+              <span class="comment-author">{{ comment.una }}</span>
+            </div>
+            <span class="comment-time">{{ formatDate(comment.crea_date) }}</span>
+          </div>
+          <div class="comment-content">{{ comment.content }}</div>
+          <div class="comment-actions">
+            <a-button type="text" size="small" @click="showReplyForm[comment.comm_id] = !showReplyForm[comment.comm_id]">
+              {{ showReplyForm[comment.comm_id] ? '取消回覆' : '回覆' }}
+            </a-button>
+          </div>
+
+          <div v-if="showReplyForm[comment.comm_id]" class="reply-form">
+            <a-textarea
+              v-model="replyContent[comment.comm_id]"
+              :rows="3"
+              :placeholder="'回覆 ' + comment.una + '...'"
+            />
+            <div class="reply-form-actions">
+              <a-button
+                type="primary"
+                size="small"
+                :loading="submitting[comment.comm_id]"
+                @click="submitReply(comment)"
+              >
+                發送
+              </a-button>
+            </div>
+          </div>
+        </div>
+        
+        <div v-if="comment.children && comment.children.length > 0" class="nested-comments">
+          <comment-tree
+            :comments="comment.children"
+            :level="Math.min(level + 1, 5)"
+            @reply="$emit('reply', $event)"
+            @userClick="$emit('userClick', $event)"
+          />
+        </div>
+      </div>
+    </div>
+  `,
+  emits: ['reply', 'userClick'],
+  setup(props, { emit }) {
+    const showReplyForm = ref<{ [key: string]: boolean }>({});
+    const replyContent = ref<{ [key: string]: string }>({});
+    const submitting = ref<{ [key: string]: boolean }>({});
+
+    const toggleReplyForm = (commentId: string) => {
+      showReplyForm.value[commentId] = !showReplyForm.value[commentId];
+    };
+
+    const submitReply = async (comment: any) => {
+      if (!postStore.userState.isAuthenticated) {
+        message.warning('請先登入後再發表評論');
+        return;
+      }
+
+      submitting.value[comment.comm_id] = true;
+      try {
+        await axios.post('http://localhost:8000/api/post/comment/create', {
+          uid: postStore.userState.user?.uid,
+          una: postStore.userState.user?.una,
+          pid: route.params.id,
+          content: replyContent.value[comment.comm_id],
+          parent_id: comment.comm_id
+        });
+
+        message.success('回覆成功');
+        replyContent.value[comment.comm_id] = '';
+        showReplyForm.value[comment.comm_id] = false;
+        await postStore.getAllComments(route.params.id as string);
+      } catch (error: any) {
+        message.error(error.response?.data?.error || '回覆發表失敗');
+      } finally {
+        submitting.value[comment.comm_id] = false;
+      }
+    };
+
+    return {
+      showReplyForm,
+      replyContent,
+      submitting,
+      toggleReplyForm,
+      submitReply,
+      formatDate // 使用外部的 formatDate 函數
+    };
+  }
+});
+
+const activeReplyId = ref(null);
+const replyContent = ref('');
+
+const handleReplyClick = (comment) => {
+  activeReplyId.value = comment.comm_id;
+  replyContent.value = '';
+};
+
+const submitReply = async (comment) => {
+  if (!postStore.userState.isAuthenticated) {
+    message.warning('請先登入後再發表評論');
+    return;
+  }
+
+  try {
+    await axios.post('http://localhost:8000/api/post/comment/create', {
+      uid: postStore.userState.user?.uid,
+      una: postStore.userState.user?.una,
+      pid: route.params.id,
+      content: replyContent.value,
+      parent_id: comment.comm_id
+    });
+
+    message.success('回覆發表成功');
+    replyContent.value = '';
+    activeReplyId.value = null;
+    await postStore.getAllComments(route.params.id as string);
+  } catch (error) {
+    message.error('回覆發表失敗');
+  }
+};
+
+const app = createApp({});
+app.component('comment-tree', CommentTree);
 </script>
 
 <style scoped>
@@ -662,5 +864,93 @@ onMounted(async () => {
   /* 改變顏色 */
   transform: scale(1.1);
   /* 放大效果 */
+}
+
+.comment-item .comment-item {
+  margin-left: 48px;
+  margin-top: 16px;
+}
+
+.comment-form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.comment-container {
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.comment-main {
+  padding: 12px;
+  background: #fafafa;
+  border-radius: 4px;
+}
+
+.reply-list {
+  margin-left: 48px;
+  margin-top: 8px;
+}
+
+.reply-item {
+  margin-top: 8px;
+  border-left: 2px solid #f0f0f0;
+  padding-left: 16px;
+}
+
+.comments-tree {
+  margin-left: 0;
+}
+
+.level-0 {
+  margin-left: 0;
+}
+
+.level-1 {
+  margin-left: 40px;
+}
+
+.level-2 {
+  margin-left: 80px;
+}
+
+.level-3 {
+  margin-left: 120px;
+}
+
+.level-4 {
+  margin-left: 160px;
+}
+
+.reply-form {
+  margin: 12px 0;
+  padding: 12px;
+  background: #f9f9f9;
+  border-radius: 4px;
+}
+
+.reply-form-actions {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.nested-comments {
+  margin-left: 24px;
+  border-left: 2px solid #f0f0f0;
+  padding-left: 16px;
+}
+
+.nested-comment {
+  margin-left: 44px !important;
+  border-left: 2px solid #f0f0f0;
+  padding-left: 20px;
+}
+
+.reply-actions {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
 }
 </style>

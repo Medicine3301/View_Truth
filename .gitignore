@@ -1,0 +1,31 @@
+# Ignore n8n-workflow directory
+n8n-workflow/
+n8n-workflow/*
+```
+
+這樣設置後：
+1. Git 將完全忽略 n8n-workflow 目錄及其下所有文件
+2. 這些文件不會被 git add 或 git commit 追蹤
+3. 它們也不會出現在 git status 中
+
+如果您已經不小心追蹤了一些 n8n-workflow 的文件，可以使用以下命令移除追蹤（但保留文件）：
+
+```bash
+git rm -r --cached n8n-workflow
+git commit -m "Remove n8n-workflow from git tracking"
+```// filepath: c:\Users\takming\Documents\GitHub\View_Truth\.gitignore
+# Ignore n8n-workflow directory
+n8n-workflow/
+n8n-workflow/*
+```
+
+這樣設置後：
+1. Git 將完全忽略 n8n-workflow 目錄及其下所有文件
+2. 這些文件不會被 git add 或 git commit 追蹤
+3. 它們也不會出現在 git status 中
+
+如果您已經不小心追蹤了一些 n8n-workflow 的文件，可以使用以下命令移除追蹤（但保留文件）：
+
+```bash
+git rm -r --cached n8n-workflow
+git commit -m "Remove n8n-workflow from git tracking"

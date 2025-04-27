@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 8.0.40, for Win64 (x86_64)
+-- MySQL dump 10.13  Distrib 8.0.41, for Win64 (x86_64)
 --
 -- Host: localhost    Database: new_community
 -- ------------------------------------------------------
--- Server version	8.0.40
+-- Server version	8.0.41
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -16,29 +16,37 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
--- Table structure for table `collect`
+-- Table structure for table `reports`
 --
 
-DROP TABLE IF EXISTS `collect`;
+DROP TABLE IF EXISTS `reports`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `collect` (
-  `pid` varchar(50) NOT NULL,
+CREATE TABLE `reports` (
+  `id` int NOT NULL AUTO_INCREMENT,
   `uid` varchar(200) NOT NULL,
-  PRIMARY KEY (`pid`,`uid`),
+  `report_reason` text NOT NULL,
+  `status` enum('pending','resolved') DEFAULT 'pending',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `pid` varchar(50) DEFAULT NULL,
+  `comm_id` varchar(50) DEFAULT NULL,
+  PRIMARY KEY (`id`),
   KEY `uid` (`uid`),
-  CONSTRAINT `collect_ibfk_1` FOREIGN KEY (`pid`) REFERENCES `post` (`pid`),
-  CONSTRAINT `collect_ibfk_2` FOREIGN KEY (`uid`) REFERENCES `users` (`uid`)
+  KEY `fk_reports_pid` (`pid`),
+  KEY `fk_reports_comm_id` (`comm_id`),
+  CONSTRAINT `fk_reports_comm_id` FOREIGN KEY (`comm_id`) REFERENCES `comments` (`comm_id`),
+  CONSTRAINT `fk_reports_pid` FOREIGN KEY (`pid`) REFERENCES `post` (`pid`),
+  CONSTRAINT `reports_ibfk_1` FOREIGN KEY (`uid`) REFERENCES `users` (`uid`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `collect`
+-- Dumping data for table `reports`
 --
 
-LOCK TABLES `collect` WRITE;
-/*!40000 ALTER TABLE `collect` DISABLE KEYS */;
-/*!40000 ALTER TABLE `collect` ENABLE KEYS */;
+LOCK TABLES `reports` WRITE;
+/*!40000 ALTER TABLE `reports` DISABLE KEYS */;
+/*!40000 ALTER TABLE `reports` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -50,4 +58,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-12-23 14:53:48
+-- Dump completed on 2025-04-26 15:51:06

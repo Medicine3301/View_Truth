@@ -20,12 +20,14 @@ class SethSpider(scrapy.Spider):
         title = response.meta['title']
         uptime = response.meta['uptime']
         subject = response.meta['subject']
-        
+        link=response.url
         content = response.xpath('//*[@id="Content1"]/p/text()').getall()
         
         yield {
+            'link': link,
             'title': title,
             'subject': subject,
             'uptime': uptime,
             'paragraph': content,
+           
         }

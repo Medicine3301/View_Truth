@@ -420,29 +420,6 @@ class GeminiVerificationSystem:
         except Exception:
             return None
 
-    def extract_involved_parties(self, content: str) -> List[str]:
-        """從內容中提取當事人信息"""
-        try:
-            parties = []
-            # 尋找可能的當事人標記
-            party_patterns = [
-                r'([\u4e00-\u9fff]{2,4})(?:先生|小姐|女士)',
-                r'([\u4e00-\u9fff]+)(?:表示|說|稱|指出)',
-                r'當事人([\u4e00-\u9fff]+)',
-                r'([\u4e00-\u9fff]+)方面'
-            ]
-            
-            for pattern in party_patterns:
-                matches = re.finditer(pattern, content)
-                for match in matches:
-                    party = match.group(1).strip()
-                    if party and party not in parties:
-                        parties.append(party)
-            
-            return parties if parties else None
-        except Exception:
-            return None
-
     def determine_credibility_level(self, score: float) -> str:
         """根據分數確定可信度級別"""
         if score >= 90:
@@ -496,7 +473,6 @@ class GeminiVerificationSystem:
         basic_info = {
             "發生時間": self.extract_date(content) or "未知",
             "地點": self.extract_location(content) or "未知",
-            "當事人": self.extract_involved_parties(content) or [],
             "事件類型": event_type
         }
         
@@ -590,7 +566,6 @@ class GeminiVerificationSystem:
                     "issues": verification_result.get('issues', [])
                 },
                 
-                "involved_parties": basic_info["當事人"],
                 "version": "1.0",
                 "system_info": {
                     "name": "Gemini Verification System",
@@ -906,41 +881,89 @@ class GeminiVerificationSystem:
 
 # 使用示例
 def main():
-    # 創建驗證系統實例
     verification_system = GeminiVerificationSystem()
     
-    # 測試信息
-    test_content = """
-今年「第1波梅雨鋒面」要來了！雨彈恐連炸6天　氣象專家示警了
-2025/04/27 05:26:00
-早知道「除斑」這麼簡單就好，我還做什麼雷射！屈臣氏爆賣中
-PR
-中國歷史有1500年「空白期」，沒有任何史料記載，究竟發生了什麼？
-鋒面到！「梅雨訊號」提早一個月出現　鄭明典驚：太早了
-輕食、運動，辛苦健康未必有感？這瓶複方多效97%讚
-PR
-Recommended by 
-生活中心／張家寧報導
+    def clear_previous_assessments():
+        """清空先前的評估結果文件"""
+        try:
+            output_path = r'.\back\news_assessments.json'
+            with open(output_path, 'w', encoding='utf-8') as f:
+                f.write('')  # 清空文件內容
+            logger.info("已清空先前的評估結果文件")
+        except Exception as e:
+            logger.error(f"清空評估結果文件時發生錯誤: {e}")
 
-氣象專家預告即將告別春雨、迎接梅雨。（圖／翻攝自臉書）
-
-▲氣象專家預告即將告別春雨、迎接梅雨。（圖／翻攝自臉書）
-
-氣象署指出，今（２７）日東北季風減弱，北部、東北部及東部氣溫回升；基隆北海岸、臺灣東北部及東部地區有局部短暫陣雨，東北部地區仍有局部較大雨勢發生的機率。有氣象專家透過臉書發文預告「告別春雨、迎接梅雨！」
-
-氣象專家林得恩今早透過臉書粉專「林老師氣象站」發文表示，在每年5、6月的春夏季節更迭，冬季北方大陸冷高壓逐漸減弱，而夏天盛行的太平洋高壓則逐漸增強，並進一步影響到我們，天氣也開始轉為酷熱。
-
-林得恩指出，當這2股冷氣團與暖氣團勢力相當，互相增長、衰退與推擠，在中國大陸南方的長江流域、江淮地區、臺灣、日本中南部和韓國南部等地上空形成一條滯留界面，我們就稱為「梅雨鋒面」；由於伴隨梅雨鋒面上常有組織性的中尺度對流系統發展，當它們從海上移入到臺灣陸地時，常會帶來局部強降雨以及雷暴、強陣風或冰雹等劇烈天氣現象。 
-
-林得恩提到，根據中央氣象署系集模式最新模擬結果顯示，5/5至5/10期間，出現日降雨量指標有較強且持續的降雨訊號，「有可能就是今年第1波梅雨鋒面所肇致的結果」。
-    """
+    def load_news_data():
+        try:
+            file_path = r'.\back\news_data.json'
+            with open(file_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            logger.error(f"讀取新聞資料失敗: {e}")
+            return []
     
-    # 執行驗證
-    result = verification_system.verify_information(test_content)
+    news_data = load_news_data()
+    clear_previous_assessments()  # 在開始新的分析前清空文件
+    final_assessments = []
     
-    # 輸出結果
-    print(json.dumps(result, ensure_ascii=False, indent=2))
-
+    # 只處理前三篇新聞
+    test_news = news_data[:3]
+    print(f"開始分析前 3 篇新聞...")
+    
+    for idx, news in enumerate(test_news, 1):
+        try:
+            print(f"\n處理第 {idx} 篇新聞:")
+            print(f"標題: {news['title']}")
+            
+            content = f"{news['title']}\n"
+            for para in news['paragraph']:
+                content += para + "\n"
+            
+            # 執行驗證並獲取結果
+            responses = verification_system.verify_with_gemini(content)
+            verification_result = verification_system.self_verification(responses, content)
+            
+            # 生成最終評估
+            final_assessment = verification_system.generate_final_assessment(
+                responses, verification_result, content
+            )
+            
+            # 添加新聞ID和時間戳
+            final_assessment['news_id'] = idx
+            final_assessment['analysis_timestamp'] = verification_system.get_current_timestamp()
+            
+            final_assessments.append(final_assessment)
+            print(f"完成第 {idx} 篇新聞分析")
+            
+        except Exception as e:
+            logger.error(f"分析第 {idx} 篇新聞時發生錯誤: {e}")
+            final_assessments.append({
+                'news_id': idx,
+                'title': news['title'],
+                'status': 'error',
+                'error_message': str(e),
+                'timestamp': verification_system.get_current_timestamp()
+            })
+    
+    # 建立完整報告
+    complete_report = {
+        'report_generated_at': verification_system.get_current_timestamp(),
+        'total_articles': len(news_data),
+        'successful_analyses': sum(1 for x in final_assessments if 'status' not in x),
+        'failed_analyses': sum(1 for x in final_assessments if 'status' in x),
+        'assessments': final_assessments
+    }
+    
+    # 保存為JSON文件
+    output_path = r'.\back\news_assessments.json'
+    try:
+        with open(output_path, 'w', encoding='utf-8') as f:
+            json.dump(complete_report, f, ensure_ascii=False, indent=2)
+        print(f"\n分析報告已保存至: {output_path}")
+    except Exception as e:
+        logger.error(f"保存報告時發生錯誤: {e}")
+        print("無法保存報告，顯示部分結果：")
+        print(json.dumps(complete_report, ensure_ascii=False, indent=2))
 
 if __name__ == "__main__":
     main()

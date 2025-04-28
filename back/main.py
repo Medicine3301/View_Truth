@@ -1,4 +1,5 @@
-import base64
+import json
+import logging
 from sanic import Sanic
 from sanic.response import json
 from sanic_cors import CORS
@@ -9,10 +10,14 @@ import uuid
 from datetime import datetime, timedelta
 import sys
 import os
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 #郵件認證的函式導入
 from back.mail import EmailVerifier
+from back.run_spider import run_spider
+from back.geminisuccess import GeminiVerificationSystem
 
 
 
@@ -33,11 +38,156 @@ DB_CONFIG = {
     "port": 3306
 }
 
+# 設置日誌
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('scheduler.log'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
+# 初始化調度器
+scheduler = AsyncIOScheduler()
+
+async def execute_spider():
+    """執行爬蟲任務"""
+    try:
+        logger.info("開始執行爬蟲任務...")
+        run_spider()
+        logger.info("爬蟲任務完成")
+        return True
+    except Exception as e:
+        logger.error(f"爬蟲任務執行失敗: {str(e)}")
+        return False
+
+async def execute_analysis():
+    """執行新聞分析任務"""
+    try:
+        logger.info("開始執行新聞分析...")
+        verification_system = GeminiVerificationSystem()
+        verification_system.main()
+        logger.info("新聞分析完成")
+        return True
+    except Exception as e:
+        logger.error(f"新聞分析執行失敗: {str(e)}")
+        return False
+
+async def update_database():
+    """更新資料庫任務"""
+    try:
+        logger.info("開始更新資料庫...")
+        
+        # 讀取分析結果文件
+        assessment_file = os.path.join(os.path.dirname(__file__), 'news_assessments.json')
+        with open(assessment_file, 'r', encoding='utf-8') as f:
+            assessments = json.load(f)
+
+        async with app.ctx.pool.acquire() as conn:
+            async with conn.cursor() as cur:
+                for article in assessments['assessments']:
+                    if 'status' in article:  # 跳過分析失敗的文章
+                        continue
+                    
+        logger.info("資料庫更新完成")
+        return True
+    except Exception as e:
+        logger.error(f"資料庫更新失敗: {str(e)}")
+        return False
+
+def job_listener(event):
+    """任務監聽器"""
+    if event.exception:
+        logger.error(f"任務執行出錯: {event.exception}")
+    else:
+        job_id = event.job_id
+        if job_id == 'spider_job':
+            logger.info("爬蟲任務完成，開始分析任務")
+            scheduler.add_job(
+                execute_analysis,
+                'date',
+                next_run_time=datetime.now(),
+                id='analysis_job'
+            )
+        elif job_id == 'analysis_job':
+            logger.info("分析任務完成，開始更新資料庫")
+            scheduler.add_job(
+                update_database,
+                'date',
+                next_run_time=datetime.now(),
+                id='database_job'
+            )
+# 4. 服務初始化和清理
 @app.listener("before_server_start")
-#set db
-async def setup_db(app, loop):
-    app.ctx.pool = await aiomysql.create_pool(**DB_CONFIG, loop=loop, autocommit=True,maxsize=10 )
+async def setup_services(app, loop):
+    """初始化所有服務"""
+    try:
+        # 初始化資料庫連接池
+        app.ctx.pool = await aiomysql.create_pool(
+            **DB_CONFIG, 
+            loop=loop, 
+            autocommit=True,
+            maxsize=15
+        )
+        logger.info("資料庫連接池已建立")
+
+        # 初始化調度器
+        scheduler.add_listener(job_listener, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR)
+        scheduler.add_job(
+            execute_spider,
+            'cron',
+            hour=2,
+            id='spider_job'
+        )
+        scheduler.start()
+        logger.info("調度器已啟動")
+
+    except Exception as e:
+        logger.error(f"服務初始化出錯: {str(e)}")
+        raise
+
+@app.listener('after_server_stop')
+async def cleanup_services(app, loop):
+    """清理所有服務"""
+    try:
+        scheduler.shutdown()
+        logger.info("調度器已關閉")
+        
+        app.ctx.pool.close()
+        await app.ctx.pool.wait_closed()
+        logger.info("資料庫連接池已關閉")
+
+    except Exception as e:
+        logger.error(f"服務清理時出錯: {str(e)}")
+
+# 任務狀態查詢API
+@app.get("/api/tasks/status")
+async def get_tasks_status(request):
+    """獲取所有任務的狀態"""
+    try:
+        spider_job = scheduler.get_job('spider_job')
+        analysis_job = scheduler.get_job('analysis_job')
+        database_job = scheduler.get_job('database_job')
+        
+        return json({
+            "spider_job": {
+                "status": "scheduled" if spider_job else "not_scheduled",
+                "next_run": spider_job.next_run_time.isoformat() if spider_job else None
+            },
+            "analysis_job": {
+                "status": "scheduled" if analysis_job else "not_scheduled",
+                "next_run": analysis_job.next_run_time.isoformat() if analysis_job else None
+            },
+            "database_job": {
+                "status": "scheduled" if database_job else "not_scheduled",
+                "next_run": database_job.next_run_time.isoformat() if database_job else None
+            }
+        })
+    except Exception as e:
+        logger.error(f"獲取任務狀態時出錯: {str(e)}")
+        return json({"error": str(e)}, status=500)
 #輔助程式-抓用戶資料
 async def get_user_by_username(pool, username):
     async with pool.acquire() as conn:

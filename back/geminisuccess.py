@@ -115,21 +115,33 @@ class GeminiVerificationSystem:
     def generate_source_checking_prompt(self, content: str) -> str:
         """生成來源檢查提示詞"""
         return f"""
-        請扮演信息評估專家，針對以下信息進行評估。如果是常識性陳述，請給予較高的可信度分數。必須要中文回應。
+        請以資訊研究專家的角度，針對以下信息進行深入的專業評估。必須中文回應。
 
         信息內容：{content}
 
-        評估指南：
-        - 如果是普遍常識或基本事實，直接給予90分以上
-        - 如果是科學常識且容易驗證，給予85分以上
-        - 如果需要專業驗證，則根據具體情況評分
+        請按以下結構分析：
+        1. 內容屬性（必選一項）：
+           - 基礎常識（無需外部佐證的基本知識）
+           - 一般性陳述（可通過基本查證的一般性信息）
+           - 專業性論述（需要專業知識或數據支持的內容）
+           - 時事新聞（需要新聞來源佐證的時事內容）
+           - 爭議性話題（需要多方佐證的爭議內容）
 
-        請按以下格式回應：
-        1. 信息性質：（說明是常識/科學事實/個人觀點/需要佐證的聲明等）
-        2. 可驗證程度：（解釋這個信息多容易被驗證）
-        3. 評估結果：（根據信息性質給出相應評估）
-        4. 可信度評分：（0-100分，常識類信息如能自我驗證可給予較高分數）
-        5. 評分理由：（解釋評分依據）
+        2. 資訊質量評估（以下各面向評分）：
+           - 資料完整性（信息是否完整）[0-100]
+           - 來源可靠性（信息來源的可信度）[0-100]
+           - 時效性（信息的時間相關性）[0-100]
+           - 可驗證性（信息是否可被驗證）[0-100]
+
+        3. 專業驗證要求：
+           - 所需專業領域
+           - 建議的驗證方法
+           - 關鍵查證重點
+
+        4. 綜合評估：
+           - 可信度評分：（0-100分）
+           - 評分依據：（詳細說明評分理由）
+           - 專業建議：（提供進一步驗證建議）
         """
     
     def query_gemini_api(self, prompt: str) -> Dict[str, Any]:
@@ -689,27 +701,86 @@ class GeminiVerificationSystem:
         """提取來源可靠性分析"""
         reliability = {
             "level": "未知",
-            "reason": "無法確定來源可靠性"
+            "reason": "無法確定來源可靠性",
+            "content_type": "未分類",
+            "quality_scores": {
+                "completeness": 0,
+                "source_reliability": 0,
+                "timeliness": 0,
+                "verifiability": 0
+            },
+            "domain_expertise": "未指定"
         }
-        # 尋找信息性質部分
-        pattern = r'信息性質[：:](.*?)(?=\d\.|\Z)'
-        match = re.search(pattern, text, re.DOTALL)
-        if match:
-            content = match.group(1).strip()
-            reliability["level"] = "可靠" if "可靠" in content else "部分可靠" if "部分" in content else "不可靠"
-            reliability["reason"] = content
+        
+        # 提取內容屬性
+        content_type_pattern = r'內容屬性[：:](.*?)(?=\d\.|\Z)'
+        if match := re.search(content_type_pattern, text, re.DOTALL):
+            reliability["content_type"] = match.group(1).strip()
+        
+        # 提取質量評分
+        quality_patterns = {
+            "completeness": r'資料完整性[：:]\s*(\d+)',
+            "source_reliability": r'來源可靠性[：:]\s*(\d+)',
+            "timeliness": r'時效性[：:]\s*(\d+)',
+            "verifiability": r'可驗證性[：:]\s*(\d+)'
+        }
+        
+        for key, pattern in quality_patterns.items():
+            if match := re.search(pattern, text):
+                reliability["quality_scores"][key] = int(match.group(1))
+        
+        # 提取專業領域
+        domain_pattern = r'所需專業領域[：:](.*?)(?=建議|\Z)'
+        if match := re.search(domain_pattern, text, re.DOTALL):
+            reliability["domain_expertise"] = match.group(1).strip()
+        
+        # 設定可靠性等級
+        avg_score = sum(reliability["quality_scores"].values()) / 4
+        if avg_score >= 80:
+            reliability["level"] = "高度可靠"
+        elif avg_score >= 60:
+            reliability["level"] = "較為可靠"
+        elif avg_score >= 40:
+            reliability["level"] = "一般可靠"
+        else:
+            reliability["level"] = "可靠性存疑"
+        
+        # 提取評分依據作為原因
+        reason_pattern = r'評分依據[：:](.*?)(?=專業建議|\Z)'
+        if match := re.search(reason_pattern, text, re.DOTALL):
+            reliability["reason"] = match.group(1).strip()
+        
         return reliability
 
     def extract_verification_requirements(self, text: str) -> List[str]:
         """提取驗證要求"""
         requirements = []
-        # 尋找來源必要性部分
-        pattern = r'來源必要性[：:](.*?)(?=\d\.|\Z)'
+        
+        # 尋找關鍵查證重點部分
+        pattern = r'關鍵查證重點[：:](.*?)(?=\d\.|\Z)'
         match = re.search(pattern, text, re.DOTALL)
         if match:
-            # 分割並清理每個要求
-            raw_requirements = match.group(1).split('\n')
-            requirements = [r.strip('- *').strip() for r in raw_requirements if r.strip()]
+            content = match.group(1).strip()
+            raw_requirements = [r.strip() for r in content.split('\n') if r.strip()]
+            
+            # 過濾空值和太短的要求
+            requirements = [
+                req.strip('- *。，：') 
+                for req in raw_requirements 
+                if len(req.strip('- *。，：')) > 5
+            ]
+            
+            # 添加預設查證要點
+            if not requirements:
+                if "專業性論述" in text:
+                    requirements = ["需要專業領域知識支持", "需要具體數據佐證", "需要權威來源引證"]
+                elif "時事新聞" in text:
+                    requirements = ["需要即時性新聞來源", "需要跨媒體查證", "需要官方資訊確認"]
+                elif "爭議性話題" in text:
+                    requirements = ["需要多方觀點比對", "需要歷史脈絡分析", "需要相關研究支持"]
+                else:
+                    requirements = ["需要基本事實查證", "需要來源可靠性確認", "需要邏輯一致性檢查"]
+        
         return requirements or ["需要進一步驗證"]
 
     def get_current_timestamp(self) -> str:
@@ -879,19 +950,20 @@ class GeminiVerificationSystem:
             return "可靠性評估失敗"
 
 
-# 使用示例
-def main():
+def run_verification_system():
+    """提供給外部調用的主要函數"""
     verification_system = GeminiVerificationSystem()
     
     def clear_previous_assessments():
-        """清空先前的評估結果文件"""
+        """刪除先前的評估結果文件"""
         try:
+            import os
             output_path = r'.\back\news_assessments.json'
-            with open(output_path, 'w', encoding='utf-8') as f:
-                f.write('')  # 清空文件內容
-            logger.info("已清空先前的評估結果文件")
+            if os.path.exists(output_path):
+                os.remove(output_path)
+                logger.info("已刪除先前的評估結果文件")
         except Exception as e:
-            logger.error(f"清空評估結果文件時發生錯誤: {e}")
+            logger.error(f"刪除評估結果文件時發生錯誤: {e}")
 
     def load_news_data():
         try:
@@ -903,10 +975,9 @@ def main():
             return []
     
     news_data = load_news_data()
-    clear_previous_assessments()  # 在開始新的分析前清空文件
+    clear_previous_assessments()
     final_assessments = []
     
-    # 只處理前三篇新聞
     test_news = news_data[:3]
     print(f"開始分析前 3 篇新聞...")
     
@@ -919,16 +990,12 @@ def main():
             for para in news['paragraph']:
                 content += para + "\n"
             
-            # 執行驗證並獲取結果
             responses = verification_system.verify_with_gemini(content)
             verification_result = verification_system.self_verification(responses, content)
-            
-            # 生成最終評估
             final_assessment = verification_system.generate_final_assessment(
                 responses, verification_result, content
             )
             
-            # 添加新聞ID和時間戳
             final_assessment['news_id'] = idx
             final_assessment['analysis_timestamp'] = verification_system.get_current_timestamp()
             
@@ -945,7 +1012,6 @@ def main():
                 'timestamp': verification_system.get_current_timestamp()
             })
     
-    # 建立完整報告
     complete_report = {
         'report_generated_at': verification_system.get_current_timestamp(),
         'total_articles': len(news_data),
@@ -954,16 +1020,17 @@ def main():
         'assessments': final_assessments
     }
     
-    # 保存為JSON文件
     output_path = r'.\back\news_assessments.json'
     try:
         with open(output_path, 'w', encoding='utf-8') as f:
             json.dump(complete_report, f, ensure_ascii=False, indent=2)
         print(f"\n分析報告已保存至: {output_path}")
+        return complete_report
     except Exception as e:
         logger.error(f"保存報告時發生錯誤: {e}")
         print("無法保存報告，顯示部分結果：")
         print(json.dumps(complete_report, ensure_ascii=False, indent=2))
+        return None
 
 if __name__ == "__main__":
-    main()
+    run_verification_system()

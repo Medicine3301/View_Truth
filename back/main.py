@@ -10,14 +10,16 @@ import uuid
 from datetime import datetime, timedelta
 import sys
 import os
+import asyncio
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED
+from json.decoder import JSONDecodeError
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 #郵件認證的函式導入
 from back.mail import EmailVerifier
 from back.run_spider import run_spider
-from back.geminisuccess import GeminiVerificationSystem
+from back.geminisuccess import GeminiVerificationSystem, run_verification_system
 
 
 
@@ -67,10 +69,8 @@ async def execute_analysis():
     """執行新聞分析任務"""
     try:
         logger.info("開始執行新聞分析...")
-        verification_system = GeminiVerificationSystem()
-        verification_system.main()
-        logger.info("新聞分析完成")
-        return True
+        # 使用模組級別的函數而不是實例方法
+        run_verification_system()
     except Exception as e:
         logger.error(f"新聞分析執行失敗: {str(e)}")
         return False
@@ -80,46 +80,124 @@ async def update_database():
     try:
         logger.info("開始更新資料庫...")
         
-        # 讀取分析結果文件
-        assessment_file = os.path.join(os.path.dirname(__file__), 'news_assessments.json')
-        with open(assessment_file, 'r', encoding='utf-8') as f:
-            assessments = json.load(f)
-
+        # 讀取 JSON 文件
+        json_path = os.path.join(os.path.dirname(__file__), 'news_assessments.json')
+        with open(json_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            
+        if not data.get('assessments'):
+            logger.warning("沒有找到需要更新的評估數據")
+            return False
+            
         async with app.ctx.pool.acquire() as conn:
             async with conn.cursor() as cur:
-                for article in assessments['assessments']:
-                    if 'status' in article:  # 跳過分析失敗的文章
-                        continue
+                for assessment in data['assessments']:
+                    # 檢查記錄是否已存在
+                    await cur.execute(
+                        """
+                        SELECT id FROM content_analysis 
+                        WHERE news_id = %s AND analysis_timestamp = %s
+                        """,
+                        (assessment['news_id'], assessment['analysis_timestamp'])
+                    )
+                    exists = await cur.fetchone()
                     
-        logger.info("資料庫更新完成")
+                    if exists:
+                        # 更新現有記錄
+                        await cur.execute(
+                            """
+                            UPDATE content_analysis SET
+                                title = %s,
+                                content = %s,
+                                publish_date = %s,
+                                location = %s,
+                                event_type = %s,
+                                credibility_score = %s,
+                                credibility_level = %s,
+                                factual_score = %s,
+                                critical_score = %s,
+                                balanced_score = %s,
+                                source_score = %s,
+                                factual_analysis = %s,
+                                critical_analysis = %s,
+                                balanced_analysis = %s,
+                                source_analysis = %s,
+                                verification_guide = %s,
+                                analysis_timestamp = %s
+                            WHERE news_id = %s
+                            """,
+                            (
+                                assessment['title'],
+                                assessment['content'],
+                                assessment['publish_date'],
+                                assessment['location'],
+                                assessment['event_type'],
+                                assessment['credibility_score'],
+                                assessment['credibility_level'],
+                                assessment['factual_score'],
+                                assessment['critical_score'],
+                                assessment['balanced_score'],
+                                assessment['source_score'],
+                                json.dumps(assessment['factual_analysis']),
+                                json.dumps(assessment['critical_analysis']),
+                                json.dumps(assessment['balanced_analysis']),
+                                json.dumps(assessment['source_analysis']),
+                                json.dumps(assessment['verification_guide']),
+                                assessment['analysis_timestamp'],
+                                assessment['news_id']
+                            )
+                        )
+                    else:
+                        # 插入新記錄
+                        await cur.execute(
+                            """
+                            INSERT INTO content_analysis (
+                                title, content, publish_date, location, event_type,
+                                credibility_score, credibility_level, 
+                                factual_score, critical_score, balanced_score, source_score,
+                                factual_analysis, critical_analysis, balanced_analysis,
+                                source_analysis, verification_guide,
+                                news_id, analysis_timestamp
+                            ) VALUES (
+                                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                                %s, %s, %s, %s, %s, %s, %s
+                            )
+                            """,
+                            (
+                                assessment['title'],
+                                assessment['content'],
+                                assessment['publish_date'],
+                                assessment['location'],
+                                assessment['event_type'],
+                                assessment['credibility_score'],
+                                assessment['credibility_level'],
+                                assessment['factual_score'],
+                                assessment['critical_score'],
+                                assessment['balanced_score'],
+                                assessment['source_score'],
+                                json.dumps(assessment['factual_analysis']),
+                                json.dumps(assessment['critical_analysis']),
+                                json.dumps(assessment['balanced_analysis']),
+                                json.dumps(assessment['source_analysis']),
+                                json.dumps(assessment['verification_guide']),
+                                assessment['news_id'],
+                                assessment['analysis_timestamp']
+                            )
+                        )
+                        
+        logger.info(f"成功更新 {len(data['assessments'])} 條新聞評估數據")
         return True
+        
+    except FileNotFoundError:
+        logger.error("找不到 news_assessments.json 文件")
+        return False
+    except json.JSONDecodeError:
+        logger.error("JSON 文件解析錯誤")
+        return False
     except Exception as e:
         logger.error(f"資料庫更新失敗: {str(e)}")
         return False
 
-def job_listener(event):
-    """任務監聽器"""
-    if event.exception:
-        logger.error(f"任務執行出錯: {event.exception}")
-    else:
-        job_id = event.job_id
-        if job_id == 'spider_job':
-            logger.info("爬蟲任務完成，開始分析任務")
-            scheduler.add_job(
-                execute_analysis,
-                'date',
-                next_run_time=datetime.now(),
-                id='analysis_job'
-            )
-        elif job_id == 'analysis_job':
-            logger.info("分析任務完成，開始更新資料庫")
-            scheduler.add_job(
-                update_database,
-                'date',
-                next_run_time=datetime.now(),
-                id='database_job'
-            )
-# 4. 服務初始化和清理
 @app.listener("before_server_start")
 async def setup_services(app, loop):
     """初始化所有服務"""
@@ -134,13 +212,41 @@ async def setup_services(app, loop):
         logger.info("資料庫連接池已建立")
 
         # 初始化調度器
-        scheduler.add_listener(job_listener, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR)
         scheduler.add_job(
             execute_spider,
             'cron',
-            hour=2,
+            hour=15,
+            minute=38,
             id='spider_job'
         )
+        
+        # 添加任務監聽器，用於在一個任務完成後觸發下一個任務
+        def job_listener(event):
+            if event.exception:
+                logger.error(f"任務執行出錯: {event.exception}")
+            else:
+                if event.job_id == 'spider_job':
+                    # 爬蟲完成後，等待1分鐘再執行分析
+                    scheduler.add_job(
+                        execute_analysis,
+                        'date',
+                        run_date=datetime.now() + timedelta(minutes=1),
+                        id='analysis_job'
+                    )
+                    logger.info("爬蟲任務完成，已排程分析任務")
+                elif event.job_id == 'analysis_job':
+                    # 分析完成後，等待5分鐘再執行資料庫更新
+                    scheduler.add_job(
+                        update_database,
+                        'date',
+                        run_date=datetime.now() + timedelta(minutes=1),
+                        id='database_job'
+                    )
+                    logger.info("分析任務完成，已排程資料庫更新任務")
+                elif event.job_id == 'database_job':
+                    logger.info("資料庫更新任務完成")
+
+        scheduler.add_listener(job_listener, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR)
         scheduler.start()
         logger.info("調度器已啟動")
 
@@ -1064,27 +1170,15 @@ async def get_statistics_overview(request):
                 total_users = (await cur.fetchone())["totalUsers"]
 
                 # 本月新增用戶數
-                await cur.execute("""
-                    SELECT COUNT(*) AS monthlyNewUsers 
-                    FROM users 
-                    WHERE reg_date >= DATE_FORMAT(CURDATE(), '%Y-%m-01');
-                """)
+                await cur.execute("""SELECT COUNT(*) AS monthlyNewUsers FROM users WHERE reg_date >= DATE_FORMAT(CURDATE(), '%Y-%m-01');""")
                 monthly_new_users = (await cur.fetchone())["monthlyNewUsers"]
 
                 # 待處理檢舉數
-                await cur.execute("""
-                    SELECT COUNT(*) AS pendingReports 
-                    FROM reports 
-                    WHERE status = 'pending';
-                """)
+                await cur.execute("""SELECT COUNT(*) AS pendingReports FROM reports WHERE status = 'pending';""")
                 pending_reports = (await cur.fetchone())["pendingReports"]
 
                 # 今日活躍用戶數
-                await cur.execute("""
-                    SELECT COUNT(DISTINCT uid) AS todayActiveUsers 
-                    FROM user_activity 
-                    WHERE activity_time >= CURDATE();
-                """)
+                await cur.execute("""SELECT COUNT(DISTINCT uid) AS todayActiveUsers FROM user_activity WHERE activity_time >= CURDATE();""")
                 today_active_users = (await cur.fetchone())["todayActiveUsers"]
 
             return json({

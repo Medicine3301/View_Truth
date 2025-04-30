@@ -974,7 +974,7 @@ def run_verification_system():
     clear_previous_assessments()
     final_assessments = []
     #測試用
-    test_news = news_data[:3]
+    test_news = news_data[:1]
     print(f"開始分析前 所有 篇新聞...")
     
     for idx, news in enumerate(news_data, 1):
@@ -985,6 +985,7 @@ def run_verification_system():
             # 加入連結處理
             link = news.get('link', 'N/A')  # 從新聞數據中獲取連結
             if not link or link == 'N/A':
+
                 # 如果沒有連結，嘗試從段落中提取URL
                 for para in news['paragraph']:
                     urls = re.findall(r'https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+[^\s]*', para)

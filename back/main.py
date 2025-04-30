@@ -216,8 +216,8 @@ async def setup_services(app, loop):
         scheduler.add_job(
             execute_spider,
             'cron',
-            hour=11,
-            minute=4,
+            hour=15,
+            minute=40,
             id='spider_job'
         )
         

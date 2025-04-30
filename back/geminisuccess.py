@@ -298,8 +298,8 @@ class GeminiVerificationSystem:
         請提供以下內容：
         1. 閱讀建議：
            - 提供3-5點具體的查證建議
-           - 使用日常用語
-           - 避免專業術語
+           - 盡量用日常用語
+           - 可以使用專業術語
            - 重點提示需要特別注意的地方
         
         2. 注意事項：
@@ -310,8 +310,8 @@ class GeminiVerificationSystem:
         
         請以JSON格式回應，包含以下字段：
         - verification_score: 對原評估的準確性評分(0-100)
-        - suggestions: 實用的閱讀建議列表（用一般民眾能理解的語言）
-        - issues: 需要注意的重點列表（簡單易懂的提醒）
+        - suggestions: 實用的閱讀建議列表
+        - issues: 需要注意的重點列表
         - adjusted_credibility: 調整後的可信度評分
         """
         
@@ -420,7 +420,7 @@ class GeminiVerificationSystem:
         """從內容中提取地點信息"""
         try:
             # 常見地點標記詞
-            location_markers = ['在', '於', '地點', '位於', '發生於']
+            location_markers = ['地點', '位於', '發生於']
             
             for marker in location_markers:
                 pattern = f"{marker}([^，。；,;\n]+)"
@@ -578,11 +578,7 @@ class GeminiVerificationSystem:
                     "issues": verification_result.get('issues', [])
                 },
                 
-                "version": "1.0",
-                "system_info": {
-                    "name": "Gemini Verification System",
-                    "timestamp": self.get_current_timestamp()
-                }
+                "analysis_timestamp": self.get_current_timestamp()
             }
             
             return final_report
@@ -977,14 +973,24 @@ def run_verification_system():
     news_data = load_news_data()
     clear_previous_assessments()
     final_assessments = []
-    
+    #測試用
     test_news = news_data[:3]
-    print(f"開始分析前 3 篇新聞...")
+    print(f"開始分析前 所有 篇新聞...")
     
-    for idx, news in enumerate(test_news, 1):
+    for idx, news in enumerate(news_data, 1):
         try:
             print(f"\n處理第 {idx} 篇新聞:")
             print(f"標題: {news['title']}")
+            
+            # 加入連結處理
+            link = news.get('link', 'N/A')  # 從新聞數據中獲取連結
+            if not link or link == 'N/A':
+                # 如果沒有連結，嘗試從段落中提取URL
+                for para in news['paragraph']:
+                    urls = re.findall(r'https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+[^\s]*', para)
+                    if urls:
+                        link = urls[0]
+                        break
             
             content = f"{news['title']}\n"
             for para in news['paragraph']:
@@ -996,6 +1002,8 @@ def run_verification_system():
                 responses, verification_result, content
             )
             
+            # 更新評估結果中的連結
+            final_assessment['link'] = link
             final_assessment['news_id'] = idx
             final_assessment['analysis_timestamp'] = verification_system.get_current_timestamp()
             

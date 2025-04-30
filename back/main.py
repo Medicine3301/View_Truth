@@ -1,7 +1,7 @@
-import json
+import json as jsonlib  # Rename json import to avoid conflict
 import logging
 from sanic import Sanic
-from sanic.response import json
+from sanic.response import json  # This json is for responses
 from sanic_cors import CORS
 import aiomysql
 import jwt
@@ -83,7 +83,7 @@ async def update_database():
         # 讀取 JSON 文件
         json_path = os.path.join(os.path.dirname(__file__), 'news_assessments.json')
         with open(json_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
+            data = jsonlib.load(f)  # Use jsonlib instead of json
             
         if not data.get('assessments'):
             logger.warning("沒有找到需要更新的評估數據")
@@ -95,10 +95,10 @@ async def update_database():
                     # 檢查記錄是否已存在
                     await cur.execute(
                         """
-                        SELECT id FROM content_analysis 
-                        WHERE news_id = %s AND analysis_timestamp = %s
+                        SELECT nid FROM content_analysis 
+                        WHERE link=% s 
                         """,
-                        (assessment['news_id'], assessment['analysis_timestamp'])
+                        (assessment['link'])
                     )
                     exists = await cur.fetchone()
                     
@@ -124,7 +124,7 @@ async def update_database():
                                 source_analysis = %s,
                                 verification_guide = %s,
                                 analysis_timestamp = %s
-                            WHERE news_id = %s
+                                WHERE link = %s
                             """,
                             (
                                 assessment['title'],
@@ -138,13 +138,13 @@ async def update_database():
                                 assessment['critical_score'],
                                 assessment['balanced_score'],
                                 assessment['source_score'],
-                                json.dumps(assessment['factual_analysis']),
-                                json.dumps(assessment['critical_analysis']),
-                                json.dumps(assessment['balanced_analysis']),
-                                json.dumps(assessment['source_analysis']),
-                                json.dumps(assessment['verification_guide']),
+                                jsonlib.dumps(assessment['factual_analysis']),  # Use jsonlib instead of json
+                                jsonlib.dumps(assessment['critical_analysis']),  # Use jsonlib instead of json
+                                jsonlib.dumps(assessment['balanced_analysis']),  # Use jsonlib instead of json
+                                jsonlib.dumps(assessment['source_analysis']),   # Use jsonlib instead of json
+                                jsonlib.dumps(assessment['verification_guide']), # Use jsonlib instead of json
                                 assessment['analysis_timestamp'],
-                                assessment['news_id']
+                                assessment['link']
                             )
                         )
                     else:
@@ -152,18 +152,20 @@ async def update_database():
                         await cur.execute(
                             """
                             INSERT INTO content_analysis (
+                                link,
                                 title, content, publish_date, location, event_type,
                                 credibility_score, credibility_level, 
                                 factual_score, critical_score, balanced_score, source_score,
                                 factual_analysis, critical_analysis, balanced_analysis,
                                 source_analysis, verification_guide,
-                                news_id, analysis_timestamp
+                                analysis_timestamp
                             ) VALUES (
                                 %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
                                 %s, %s, %s, %s, %s, %s, %s
                             )
                             """,
                             (
+                                assessment['link'],
                                 assessment['title'],
                                 assessment['content'],
                                 assessment['publish_date'],
@@ -175,12 +177,11 @@ async def update_database():
                                 assessment['critical_score'],
                                 assessment['balanced_score'],
                                 assessment['source_score'],
-                                json.dumps(assessment['factual_analysis']),
-                                json.dumps(assessment['critical_analysis']),
-                                json.dumps(assessment['balanced_analysis']),
-                                json.dumps(assessment['source_analysis']),
-                                json.dumps(assessment['verification_guide']),
-                                assessment['news_id'],
+                                jsonlib.dumps(assessment['factual_analysis']),  # Use jsonlib instead of json
+                                jsonlib.dumps(assessment['critical_analysis']),  # Use jsonlib instead of json
+                                jsonlib.dumps(assessment['balanced_analysis']),  # Use jsonlib instead of json
+                                jsonlib.dumps(assessment['source_analysis']),   # Use jsonlib instead of json
+                                jsonlib.dumps(assessment['verification_guide']), # Use jsonlib instead of json
                                 assessment['analysis_timestamp']
                             )
                         )
@@ -191,7 +192,7 @@ async def update_database():
     except FileNotFoundError:
         logger.error("找不到 news_assessments.json 文件")
         return False
-    except json.JSONDecodeError:
+    except jsonlib.JSONDecodeError:  # Use jsonlib instead of json
         logger.error("JSON 文件解析錯誤")
         return False
     except Exception as e:
@@ -215,8 +216,8 @@ async def setup_services(app, loop):
         scheduler.add_job(
             execute_spider,
             'cron',
-            hour=15,
-            minute=38,
+            hour=11,
+            minute=4,
             id='spider_job'
         )
         
@@ -230,16 +231,16 @@ async def setup_services(app, loop):
                     scheduler.add_job(
                         execute_analysis,
                         'date',
-                        run_date=datetime.now() + timedelta(minutes=1),
+                        run_date=datetime.now() + timedelta(seconds=5),
                         id='analysis_job'
                     )
                     logger.info("爬蟲任務完成，已排程分析任務")
                 elif event.job_id == 'analysis_job':
-                    # 分析完成後，等待5分鐘再執行資料庫更新
+                    # 分析完成後，等待1分鐘再執行資料庫更新
                     scheduler.add_job(
                         update_database,
                         'date',
-                        run_date=datetime.now() + timedelta(minutes=1),
+                        run_date=datetime.now() + timedelta(seconds=5),
                         id='database_job'
                     )
                     logger.info("分析任務完成，已排程資料庫更新任務")

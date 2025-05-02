@@ -191,14 +191,25 @@ class GeminiVerificationSystem:
             raise
     
     def extract_score(self, text: str) -> float:
-        """從回應文本中提取可信度評分，改進版"""
+        """從回應文本中提取可信度評分
+        
+        評分標準：
+        - 0-100分制
+        - 越高表示越可信
+        - 90-100: 高度可信
+        - 70-89: 較為可信
+        - 50-69: 中等可信
+        - 30-49: 較不可信
+        - 0-29: 不可信
+        """
         try:
-            # 匹配更精確的評分模式
+            # 優先匹配明確的分數表述
             patterns = [
                 r'可信度評分[：:]\s*(\d+(?:\.\d+)?)',
+                r'可信度[：:]\s*(\d+(?:\.\d+)?)\s*分',
                 r'評分[：:]\s*(\d+(?:\.\d+)?)',
-                r'score[：:]\s*(\d+(?:\.\d+)?)',
-                r'(\d+(?:\.\d+)?)\s*分'
+                r'分數[：:]\s*(\d+(?:\.\d+)?)',
+                r'(\d+(?:\.\d+)?)\s*[分/]\s*100'
             ]
             
             for pattern in patterns:
@@ -207,85 +218,102 @@ class GeminiVerificationSystem:
                 for match in matches:
                     try:
                         score = float(match.group(1))
-                        if 0 <= score <= 100:  # 確保分數在有效範圍內
+                        if 0 <= score <= 100:
                             scores.append(score)
                     except ValueError:
                         continue
                 
                 if scores:
-                    # 如果找到多個分數，取中位數避免極端值
-                    return statistics.median(scores)
+                    return max(scores)  # 返回最高分，因為越高越可信
             
-            # 如果沒有找到有效分數，進行文本分析
+            # 如果沒有明確分數，根據文本描述評估
             text_lower = text.lower()
-            if "高度可信" in text_lower or "非常可靠" in text_lower:
-                return 90.0
-            elif "較為可信" in text_lower or "比較可靠" in text_lower:
-                return 75.0
-            elif "一般" in text_lower or "中等" in text_lower:
-                return 60.0
-            elif "較不可信" in text_lower or "不太可靠" in text_lower:
+            if any(phrase in text_lower for phrase in ["高度可信", "非常可靠", "完全可信", "證據充分"]):
+                return 95.0
+            elif any(phrase in text_lower for phrase in ["較為可信", "比較可靠", "基本可信"]):
+                return 80.0
+            elif any(phrase in text_lower for phrase in ["中等可信", "一般可靠", "部分可信"]):
+                return 65.0
+            elif any(phrase in text_lower for phrase in ["較不可信", "可信度較低", "存在疑點"]):
                 return 40.0
-            elif "不可信" in text_lower or "不可靠" in text_lower:
+            elif any(phrase in text_lower for phrase in ["不可信", "不可靠", "證據不足"]):
                 return 20.0
             
-            return 50.0  # 默認中等可信度
+            return 50.0  # 預設中等可信度
             
         except Exception as e:
             logger.error(f"提取評分時發生錯誤: {e}")
             return 50.0
 
     def calculate_weighted_score(self, responses: Dict[str, Any]) -> float:
-        """計算加權評分，改進版"""
+        """計算加權評分，確保高分表示高可信度
+        
+        權重分配：
+        - factual: 35% (事實檢查最重要)
+        - critical: 25% (批判性分析次之)
+        - balanced: 25% (平衡性分析同等重要)
+        - source: 15% (來源可靠性作為補充)
+        
+        每個面向的分數都是0-100分制，越高越可信
+        """
         try:
-            # 設定不同角度的權重
             weights = {
-                'factual': 0.35,    # 重視事實檢查
-                'critical': 0.30,   # 重視批判性分析
-                'balanced': 0.20,   # 平衡視角
-                'source': 0.15      # 來源可靠性
+                'factual': 0.35,
+                'critical': 0.25,
+                'balanced': 0.25,
+                'source': 0.15
             }
             
-            scores = {}
             total_weight = 0
             weighted_sum = 0
+            valid_scores = {}
             
-            # 收集所有有效分數
+            # 收集有效分數
             for angle, response in responses.items():
-                if angle in weights and 'score' in response:
-                    score = float(response['score'])
-                    if 0 <= score <= 100:  # 驗證分數範圍
-                        scores[angle] = score
-                        weight = weights[angle]
-                        weighted_sum += score * weight
-                        total_weight += weight
+                if angle in weights and isinstance(response, dict) and 'score' in response:
+                    try:
+                        score = float(response['score'])
+                        if 0 <= score <= 100:  # 驗證分數範圍
+                            valid_scores[angle] = score
+                            weight = weights[angle]
+                            weighted_sum += score * weight
+                            total_weight += weight
+                    except (ValueError, TypeError):
+                        logger.warning(f"{angle}角度的分數無效")
+                        continue
             
-            # 檢查是否有足夠的有效分數
-            if not scores:
-                logger.warning("沒有找到有效的評分")
+            # 確保至少有兩個有效評分
+            if len(valid_scores) < 2:
+                logger.warning("有效評分數據不足")
+                if valid_scores:
+                    # 如果只有一個有效分數，直接使用
+                    return next(iter(valid_scores.values()))
                 return 50.0
             
-            if total_weight == 0:
-                logger.warning("總權重為零")
-                return statistics.mean(scores.values())
-            
             # 計算加權平均
-            final_score = weighted_sum / total_weight
+            if total_weight > 0:
+                final_score = weighted_sum / total_weight
+            else:
+                final_score = 50.0
             
-            # 加入分數調整邏輯
-            if any(score < 20 for score in scores.values()):
-                # 如果任何角度的分數特別低，降低最終分數
-                final_score *= 0.8
-            elif all(score > 80 for score in scores.values()):
-                # 如果所有角度都很高分，稍微提升最終分數
+            # 根據分數分佈進行調整
+            if any(score < 30 for score in valid_scores.values()):
+                # 如果任一面向極低分，降低整體評分
+                final_score = min(final_score, max(valid_scores.values()) * 0.8)
+            elif all(score > 80 for score in valid_scores.values()):
+                # 如果所有面向都高分，適度提升但不超過100
                 final_score = min(100, final_score * 1.1)
             
-            return round(final_score, 1)
+            # 根據評分數量調整可信度
+            confidence_factor = len(valid_scores) / len(weights)
+            final_score *= min(1.0, confidence_factor * 1.2)  # 允許最多20%的提升
+            
+            return round(min(100, max(0, final_score)), 1)  # 確保分數在0-100範圍內
             
         except Exception as e:
             logger.error(f"計算加權分數時發生錯誤: {e}")
             return 50.0
-    
+
     def self_verification(self, gemini_response: Dict[str, Any], content: str) -> Dict[str, Any]:
         """讓Gemini審查自己的回應，並生成使用者友善的建議"""
         verification_prompt = f"""
@@ -977,7 +1005,7 @@ def run_verification_system():
     test_news = news_data[:1]
     print(f"開始分析前 所有 篇新聞...")
     
-    for idx, news in enumerate(news_data, 1):
+    for idx, news in enumerate(test_news, 1):
         try:
             print(f"\n處理第 {idx} 篇新聞:")
             print(f"標題: {news['title']}")

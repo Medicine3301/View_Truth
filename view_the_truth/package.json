@@ -13,6 +13,7 @@
     "@opentiny/vue": "^3.20.0",
     "@tinymce/tinymce-vue": "^4.0.7",
     "@types/dompurify": "^3.0.5",
+    "@vueuse/core": "^13.1.0",
     "ant-design-vue": "^4.2.5",
     "axios": "^1.7.7",
     "date-fns": "^4.1.0",

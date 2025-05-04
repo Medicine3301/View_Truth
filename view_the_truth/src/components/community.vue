@@ -9,7 +9,16 @@
             <!-- 社群資訊區塊 -->
             <template v-if="community">
               <div class="community-info">
-                <h2 class="community-title">{{ community.cna }}</h2>
+                <div class="community-header">
+                  <h2 class="community-title">{{ community.cna }}</h2>
+                  <a-input-search
+                    v-model:value="searchText"
+                    placeholder="搜尋文章"
+                    style="width: 300px"
+                    @search="onSearch"
+                    enter-button
+                  />
+                </div>
                 <div class="post-header">
                   <p class="community-description">{{ community.descr }}</p>
                   <a-button type="primary" size="large" @click="showPostModal">發表文章</a-button>
@@ -23,8 +32,8 @@
 
             <!-- 貼文列表區塊 -->
             <div class="post-list">
-              <template v-if="posts && posts.length > 0">
-                <div v-for="post in posts" :key="post.pid" class="post-item" @click="goToPost(post.pid)">
+              <template v-if="filteredPosts && filteredPosts.length > 0">
+                <div v-for="post in filteredPosts" :key="post.pid" class="post-item" @click="goToPost(post.pid)">
                   <div class="post-header">
                     <h3 class="post-title">{{ post.title }}</h3>
                     <span class="post-date">{{ formatDate(post.crea_date) }}</span>
@@ -50,7 +59,7 @@
                   </div>
                 </div>
               </template>
-              <a-empty v-else description="目前沒有貼文" />
+              <a-empty v-else description="沒有找到相關文章" />
             </div>
           </a-spin>
         </div>
@@ -271,6 +280,25 @@ const handlePostSubmit = async () => {
   }
 }
 
+// 添加搜尋相關的狀態和計算屬性
+const searchText = ref('')
+
+// 過濾貼文的計算屬性
+const filteredPosts = computed(() => {
+  if (!searchText.value) return posts.value
+  const searchLower = searchText.value.toLowerCase()
+  return posts.value?.filter(post => 
+    post.title?.toLowerCase().includes(searchLower) ||
+    post.content?.toLowerCase().includes(searchLower) ||
+    post.una?.toLowerCase().includes(searchLower)
+  ) || []
+})
+
+// 搜尋處理函數
+const onSearch = (value: string) => {
+  searchText.value = value
+}
+
 // 元件掛載
 onMounted(async () => {
   const communityId = route.params.id
@@ -295,10 +323,17 @@ onMounted(async () => {
   border-radius: 4px;
 }
 
+.community-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
 .community-title {
   font-size: 24px;
   font-weight: bold;
-  margin-bottom: 16px;
+  margin-bottom: 0;
   color: #1890ff;
 }
 

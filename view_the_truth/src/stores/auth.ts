@@ -101,14 +101,27 @@ interface Newstate {
     comments: comment[] | null
 }
 interface news {
-    newstitle: string
-    news_id: string
-    journ: string
-    newsclass: string
-    news_content: string
-    suggest: string
-    score: string
-    crea_date: string
+    nid: string  // 改為 nid
+    link: string
+    title: string
+    content: string
+    publish_date: string
+    location: string
+    event_type: string
+    credibility_score: number
+    credibility_level: string
+    factual_score: number
+    critical_score: number
+    balanced_score: number
+    source_score: number
+    factual_analysis: any
+    critical_analysis: any
+    balanced_analysis: any
+    source_analysis: any
+    verification_guide: any
+    analysis_timestamp: string
+    created_at: string
+    updated_at: string
 }
 interface RegisterUserData {
     name: string

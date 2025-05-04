@@ -10,20 +10,338 @@
               <a-card class="post-card" :bordered="false">
                 <template #title>
                   <div class="post-header">
-                    <h2 class="post-title">{{ news.newstitle}}</h2>
+                    <h2 class="post-title">{{ news.title }}</h2>
                     <div class="post-meta">
-                      <span class="post-time">{{formatDate(news.crea_date)}}</span>
-                      <!--評分模組-->
-                      <a-rate v-model:value="value" />
-                      
+                      <span class="post-time">{{ formatDate(news.publish_date) }}</span>
+                      <span class="post-location">{{ news.location }}</span>
+                      <span class="post-type">{{ news.event_type }}</span>
                     </div>
                   </div>
                 </template>
+
+                <!-- 新增：可信度評分和可靠性資訊區塊 -->
+                <div class="credibility-overview">
+                  <div class="credibility-banner" :class="getCredibilityLevelClass(news.credibility_level)">
+                    <div class="credibility-main">
+                      <div class="score-circle">
+                        <span class="score-number">{{ news.credibility_score }}</span>
+                        <span class="score-label">可信度</span>
+                      </div>
+                      <div class="credibility-details">
+                        <h2 class="credibility-level">{{ news.credibility_level }}</h2>
+                        <p class="credibility-explanation">{{ getCredibilityExplanation(news.credibility_level) }}</p>
+                      </div>
+                    </div>
+                    <div class="reliability-summary">
+                      <div class="reliability-badge">
+                        <safety-outlined />
+                        <span>來源可靠度：{{ news.source_analysis.reliability.level }}</span>
+                      </div>
+                      <p class="reliability-reason">{{ news.source_analysis.reliability.reason }}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 新聞內容 -->
                 <div class="post-content">
-                    <a :href="news.journ" target="_blank">新聞連結</a>
-                    <p>{{news.news_content}}</p>
-                    <p>{{news.suggest}}</p>
-                    <p>分數:{{news.score}}</p>
+                  <div class="news-link-container">
+                    <a :href="news.link" target="_blank" class="news-link">
+                      <link-outlined class="link-icon" />
+                      <span class="link-text">查看原始新聞報導</span>
+                      <arrow-right-outlined class="arrow-icon" />
+                    </a>
+                  </div>
+                  <p>{{ news.content }}</p>
+                  
+                  <!-- 分析結果顯示 -->
+                  <div class="analysis-results">
+                    <h3>
+                      <a-space>
+                        <a-icon type="bar-chart" />
+                        新聞分析結果
+                      </a-space>
+                    </h3>
+
+                    <!-- 分數概覽卡片 -->
+                    <a-row :gutter="[16, 16]" class="score-cards">
+                      <a-col :span="6">
+                        <a-card hoverable>
+                          <a-statistic
+                            title="真實性評分"
+                            :value="news.factual_score"
+                            :precision="1"
+                            :value-style="{ color: getScoreColor(news.factual_score) }"
+                            suffix="/ 100"
+                          >
+                            <template #prefix>
+                              <verification-outlined />
+                            </template>
+                          </a-statistic>
+                        </a-card>
+                      </a-col>
+                      <a-col :span="6">
+                        <a-card hoverable>
+                          <a-statistic
+                            title="批判性評分"
+                            :value="news.critical_score"
+                            :precision="1"
+                            :value-style="{ color: getScoreColor(news.critical_score) }"
+                            suffix="/ 100"
+                          >
+                            <template #prefix>
+                              <eye-outlined />
+                            </template>
+                          </a-statistic>
+                        </a-card>
+                      </a-col>
+                      <a-col :span="6">
+                        <a-card hoverable>
+                          <a-statistic
+                            title="平衡性評分"
+                            :value="news.balanced_score"
+                            :precision="1"
+                            :value-style="{ color: getScoreColor(news.balanced_score) }"
+                            suffix="/ 100"
+                          >
+                            <template #prefix>
+                              <balance-outlined />
+                            </template>
+                          </a-statistic>
+                        </a-card>
+                      </a-col>
+                      <a-col :span="6">
+                        <a-card hoverable>
+                          <a-statistic
+                            title="來源可靠度"
+                            :value="news.source_score"
+                            :precision="1"
+                            :value-style="{ color: getScoreColor(news.source_score) }"
+                            suffix="/ 100"
+                          >
+                            <template #prefix>
+                              <safety-outlined />
+                            </template>
+                          </a-statistic>
+                        </a-card>
+                      </a-col>
+                    </a-row>
+
+                   
+                    <!-- 詳細分析結果 -->
+                    <a-collapse 
+                      class="analysis-collapse"
+                      :bordered="false"
+                      expand-icon-position="right"
+                    >
+                      <a-collapse-panel key="1" header="事實檢核">
+                        <div class="analysis-section">
+                          <a-card class="finding-card">
+                            <template #title>
+                              <span class="section-title">
+                                <check-circle-outlined />
+                                發現的事實
+                              </span>
+                            </template>
+                            <ul class="finding-list">
+                              <li v-for="(finding, index) in news.factual_analysis.findings" :key="index" 
+                                  class="finding-item">
+                                <check-outlined class="list-icon" />
+                                <span>{{ finding }}</span>
+                              </li>
+                            </ul>
+                          </a-card>
+                          
+                          <a-card class="basis-card">
+                            <template #title>
+                              <span class="section-title">
+                                <file-search-outlined />
+                                分析依據
+                              </span>
+                            </template>
+                            <ul class="basis-list">
+                              <li v-for="(basis, index) in news.factual_analysis.basis" :key="index"
+                                  class="basis-item">
+                                <info-circle-outlined class="list-icon" />
+                                <span>{{ basis }}</span>
+                              </li>
+                            </ul>
+                          </a-card>
+                        </div>
+                      </a-collapse-panel>
+                    
+                      <a-collapse-panel key="2" header="批判性分析">
+                        <div class="analysis-section">
+                          <a-card class="problems-card">
+                            <template #title>
+                              <span class="section-title">
+                                <warning-outlined />
+                                主要問題
+                              </span>
+                            </template>
+                            <ul class="problems-list">
+                              <li v-for="(problem, index) in news.critical_analysis.problems" :key="index"
+                                  class="problem-item">
+                                <exclamation-circle-outlined class="list-icon warning" />
+                                <span>{{ problem }}</span>
+                              </li>
+                            </ul>
+                          </a-card>
+                          
+                          <a-card class="fallacies-card">
+                            <template #title>
+                              <span class="section-title">
+                                <bug-outlined />
+                                邏輯謬誤
+                              </span>
+                            </template>
+                            <ul class="fallacies-list">
+                              <li v-for="(fallacy, index) in news.critical_analysis.logical_fallacies" :key="index"
+                                  class="fallacy-item">
+                                <stop-outlined class="list-icon error" />
+                                <span>{{ fallacy }}</span>
+                              </li>
+                            </ul>
+                          </a-card>
+                        </div>
+                      </a-collapse-panel>
+                    
+                      <a-collapse-panel key="3" header="平衡性分析">
+                        <div class="analysis-section">
+                          <a-card class="supporting-card">
+                            <template #title>
+                              <span class="section-title">
+                                <like-outlined />
+                                支持觀點
+                              </span>
+                            </template>
+                            <ul class="supporting-list">
+                              <li v-for="(point, index) in news.balanced_analysis.supporting_points" :key="index"
+                                  class="supporting-item">
+                                <plus-circle-outlined class="list-icon support" />
+                                <span>{{ point }}</span>
+                              </li>
+                            </ul>
+                          </a-card>
+                          
+                          <a-card class="opposing-card">
+                            <template #title>
+                              <span class="section-title">
+                                <dislike-outlined />
+                                反對觀點
+                              </span>
+                            </template>
+                            <ul class="opposing-list">
+                              <li v-for="(point, index) in news.balanced_analysis.opposing_points" :key="index"
+                                  class="opposing-item">
+                                <minus-circle-outlined class="list-icon oppose" />
+                                <span>{{ point }}</span>
+                              </li>
+                            </ul>
+                          </a-card>
+                        </div>
+                      </a-collapse-panel>
+                    
+                      <a-collapse-panel key="4" header="來源分析">
+                        <div class="analysis-section">
+                          <a-card class="reliability-card">
+                            <template #title>
+                              <span class="section-title">
+                                <safety-outlined />
+                                可靠度分析
+                              </span>
+                            </template>
+                            <div class="reliability-content">
+                              <div class="reliability-level">
+                                <trophy-outlined class="level-icon" />
+                                <span class="level-text">{{ news.source_analysis.reliability.level }}</span>
+                              </div>
+                              <div class="reliability-reason">
+                                <solution-outlined class="reason-icon" />
+                                <p>{{ news.source_analysis.reliability.reason }}</p>
+                              </div>
+                            </div>
+                          </a-card>
+                      
+                          <a-card class="content-type-card">
+                            <template #title>
+                              <span class="section-title">
+                                <file-text-outlined />
+                                內容類型
+                              </span>
+                            </template>
+                            <p class="content-type-text">{{ news.source_analysis.reliability.content_type }}</p>
+                          </a-card>
+                      
+                          <a-card class="quality-score-card">
+                            <template #title>
+                              <span class="section-title">
+                                <bar-chart-outlined />
+                                品質評分
+                              </span>
+                            </template>
+                            <ul class="quality-score-list">
+                              <li class="quality-score-item">
+                                <check-circle-outlined class="score-icon completeness" />
+                                <span>完整性：</span>
+                                <a-progress :percent="news.source_analysis.reliability.quality_scores.completeness" size="small" />
+                              </li>
+                              <li class="quality-score-item">
+                                <safety-outlined class="score-icon reliability" />
+                                <span>來源可靠性：</span>
+                                <a-progress :percent="news.source_analysis.reliability.quality_scores.source_reliability" size="small" />
+                              </li>
+                              <li class="quality-score-item">
+                                <clock-circle-outlined class="score-icon timeliness" />
+                                <span>時效性：</span>
+                                <a-progress :percent="news.source_analysis.reliability.quality_scores.timeliness" size="small" />
+                              </li>
+                              <li class="quality-score-item">
+                                <audit-outlined class="score-icon verifiability" />
+                                <span>可驗證性：</span>
+                                <a-progress :percent="news.source_analysis.reliability.quality_scores.verifiability" size="small" />
+                              </li>
+                            </ul>
+                          </a-card>
+                        </div>
+                      </a-collapse-panel>
+                    
+                      <a-collapse-panel key="5" header="查證指南">
+                        <div class="analysis-section">
+                          <a-card class="verification-card">
+                            <template #title>
+                              <span class="section-title">
+                                <bulb-outlined />
+                                查證建議
+                              </span>
+                            </template>
+                            <ul class="verification-list">
+                              <li v-for="(suggestion, index) in news.verification_guide.suggestions" :key="index"
+                                  class="verification-item">
+                                <notification-outlined class="list-icon suggestion" />
+                                <span>{{ suggestion }}</span>
+                              </li>
+                            </ul>
+                          </a-card>
+                          
+                          <a-card class="issues-card">
+                            <template #title>
+                              <span class="section-title">
+                                <warning-outlined />
+                                需要注意的問題
+                              </span>
+                            </template>
+                            <ul class="issues-list">
+                              <li v-for="(issue, index) in news.verification_guide.issues" :key="index"
+                                  class="issue-item">
+                                <exclamation-circle-outlined class="list-icon warning" />
+                                <span>{{ issue }}</span>
+                              </li>
+                            </ul>
+                          </a-card>
+                        </div>
+                      </a-collapse-panel>
+                    </a-collapse>
+                  </div>
                 </div>
               </a-card>
   
@@ -394,6 +712,65 @@
   // 註冊組件
   const app = createApp({});
   app.component('comment-tree', CommentTree);
+
+  // 在 script 部分添加
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return '#52c41a';
+    if (score >= 50) return '#1890ff';
+    if (score >= 30) return '#faad14';
+    return '#f5222d';
+  };
+
+  // 在script部分添加以下import
+  import { 
+    CheckCircleOutlined,
+    FileSearchOutlined,
+    InfoCircleOutlined,
+    WarningOutlined,
+    ExclamationCircleOutlined,
+    BugOutlined,
+    StopOutlined,
+    CheckOutlined,
+    LikeOutlined,
+    DislikeOutlined,
+    PlusCircleOutlined,
+    MinusCircleOutlined,
+    TrophyOutlined,
+    SolutionOutlined,
+    FileTextOutlined,
+    BarChartOutlined,
+    ClockCircleOutlined,
+    AuditOutlined,
+    BulbOutlined,
+    NotificationOutlined,
+    SafetyOutlined,
+    LinkOutlined,
+    ArrowRightOutlined
+  } from '@ant-design/icons-vue';
+
+  // 新增：獲取可信度等級對應的 CSS class
+  const getCredibilityLevelClass = (level: string) => {
+    const levelMap = {
+      '極高可信': 'very-high',
+      '高度可信': 'high',
+      '中度可信': 'medium',
+      '低度可信': 'low',
+      '極低可信': 'very-low'
+    };
+    return levelMap[level] || 'medium';
+  };
+
+  // 新增：獲取可信度等級說明
+  const getCredibilityExplanation = (level: string) => {
+    const explanationMap = {
+      '極高可信': '新聞內容非常可靠，幾乎沒有爭議點',
+      '高度可信': '新聞內容大致可靠，僅有少許爭議',
+      '中度可信': '新聞內容部分可信，存在一些爭議點',
+      '低度可信': '新聞內容存在較多爭議，需謹慎參考',
+      '極低可信': '新聞內容可信度極低，建議尋找其他來源'
+    };
+    return explanationMap[level] || '正在評估可信度';
+  };
   </script>
   
   <style scoped>
@@ -441,6 +818,10 @@
     word-wrap: break-word; /* 让长单词或连续字符自动换行 */
     word-break: break-word; /* 强制换行，适用于多种语言 */
     white-space: normal; /* 确保文字正常换行，而不是保留空格或强制单行显示 */
+    background: white;
+    padding: 24px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   }
   
   .comment-form {
@@ -617,5 +998,504 @@
     margin-top: 8px;
     display: flex;
     gap: 8px;
+  }
+
+  .scores-container {
+    margin: 20px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .score-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .score-item span {
+    min-width: 100px;
+  }
+
+  .analysis-results {
+    margin-top: 24px;
+    padding: 16px;
+    background: #f8f8f8;
+    border-radius: 8px;
+  }
+
+  .analysis-results h3 {
+    margin-bottom: 16px;
+    color: #1890ff;
+  }
+
+  .analysis-results {
+    margin-top: 32px;
+    padding: 24px;
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.09);
+  }
+
+  .analysis-results h3 {
+    margin-bottom: 24px;
+    color: #1890ff;
+    font-size: 20px;
+    font-weight: 500;
+  }
+
+  .score-cards {
+    margin-bottom: 32px;
+  }
+
+  .scores-container {
+    margin: 24px 0;
+    background: #fafafa;
+    padding: 24px;
+    border-radius: 8px;
+  }
+
+  .score-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .score-item span {
+    min-width: 120px;
+    font-weight: 500;
+  }
+
+  .analysis-collapse {
+    background: #fafafa;
+    margin-top: 24px;
+  }
+
+  :deep(.ant-collapse-header) {
+    font-weight: 500;
+  }
+
+  :deep(.ant-progress-text) {
+    font-weight: 500;
+  }
+
+  :deep(.ant-card) {
+    transition: all 0.3s;
+  }
+
+  :deep(.ant-card:hover) {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  }
+
+  .credibility-score {
+    font-size: 14px;
+    color: #1890ff;
+    font-weight: 500;
+  }
+
+  .score-item :deep(.ant-progress-text) {
+    color: #262626;
+    font-weight: 500;
+  }
+
+  .score-item :deep(.ant-progress-bg) {
+    transition: all 0.4s cubic-bezier(0.08, 0.82, 0.17, 1);
+  }
+
+  .score-item :deep(.ant-progress) {
+    width: 300px;
+  }
+
+  .analysis-section {
+    padding: 16px;
+  }
+
+  .analysis-section h4 {
+    color: #1890ff;
+    margin: 16px 0 8px 0;
+  }
+
+  .analysis-section ul {
+    list-style: none;
+    padding-left: 0;
+  }
+
+  .analysis-section li {
+    margin-bottom: 8px;
+    line-height: 1.6;
+  }
+
+  .analysis-section p {
+    margin: 8px 0;
+    line-height: 1.6;
+  }
+
+  .analysis-section .ant-card {
+    margin-bottom: 16px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+
+  .section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #1890ff;
+    font-weight: 500;
+  }
+
+  .list-icon {
+    margin-right: 8px;
+    font-size: 16px;
+  }
+
+  .finding-item, .basis-item, .problem-item, .fallacy-item {
+    display: flex;
+    align-items: flex-start;
+    padding: 12px;
+    margin: 8px 0;
+    background: #fafafa;
+    border-radius: 6px;
+    transition: all 0.3s;
+  }
+
+  .finding-item:hover, .basis-item:hover, 
+  .problem-item:hover, .fallacy-item:hover {
+    background: #f0f5ff;
+    transform: translateX(4px);
+  }
+
+  .finding-item .list-icon {
+    color: #52c41a;
+  }
+
+  .basis-item .list-icon {
+    color: #1890ff;
+  }
+
+  .problem-item .list-icon {
+    color: #faad14;
+  }
+
+  .fallacy-item .list-icon {
+    color: #ff4d4f;
+  }
+
+  .finding-list, .basis-list, .problems-list, .fallacies-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  :deep(.ant-card-head) {
+    border-bottom: 2px solid #f0f0f0;
+  }
+
+  :deep(.ant-collapse-content-box) {
+    padding: 0 !important;
+  }
+
+  :deep(.ant-card-body) {
+    padding: 16px;
+  }
+
+  .warning {
+    color: #faad14;
+  }
+
+  .error {
+    color: #ff4d4f;
+  }
+
+  /* 平衡性分析樣式 */
+  .supporting-item, .opposing-item {
+    display: flex;
+    align-items: flex-start;
+    padding: 12px;
+    margin: 8px 0;
+    background: #fafafa;
+    border-radius: 6px;
+    transition: all 0.3s;
+  }
+  
+  .supporting-item:hover {
+    background: #f6ffed;
+    transform: translateX(4px);
+  }
+  
+  .opposing-item:hover {
+    background: #fff1f0;
+    transform: translateX(4px);
+  }
+  
+  .support {
+    color: #52c41a;
+  }
+  
+  .oppose {
+    color: #ff4d4f;
+  }
+  
+  /* 來源分析樣式 */
+  .reliability-content {
+    padding: 16px;
+  }
+  
+  .reliability-level {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  
+  .level-icon {
+    font-size: 24px;
+    color: #faad14;
+  }
+  
+  .level-text {
+    font-size: 18px;
+    font-weight: 500;
+    color: #262626;
+  }
+  
+  .reliability-reason {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  
+  .content-type-text {
+    padding: 12px;
+    background: #fafafa;
+    border-radius: 6px;
+    margin: 8px 0;
+  }
+  
+  .quality-score-list {
+    list-style: none;
+    padding: 0;
+  }
+  
+  .quality-score-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  
+  .score-icon {
+    font-size: 16px;
+  }
+  
+  .completeness { color: #52c41a; }
+  .reliability { color: #1890ff; }
+  .timeliness { color: #faad14; }
+  .verifiability { color: #722ed1; }
+  
+  /* 查證指南樣式 */
+  .verification-item, .issue-item {
+    display: flex;
+    align-items: flex-start;
+    padding: 12px;
+    margin: 8px 0;
+    background: #fafafa;
+    border-radius: 6px;
+    transition: all 0.3s;
+  }
+  
+  .verification-item:hover {
+    background: #e6f7ff;
+    transform: translateX(4px);
+  }
+  
+  .issue-item:hover {
+    background: #fff7e6;
+    transform: translateX(4px);
+  }
+  
+  .suggestion {
+    color: #1890ff;
+  }
+
+  /* 新增：可信度概覽樣式 */
+  .credibility-overview {
+    margin-bottom: 24px;
+  }
+
+  .credibility-banner {
+    padding: 32px;
+    border-radius: 12px;
+    color: white;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  }
+
+  .credibility-main {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    margin-bottom: 16px;
+  }
+
+  .score-circle {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    width: 120px;
+    height: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(5px);
+  }
+
+  .score-number {
+    font-size: 40px;
+    font-weight: bold;
+    line-height: 1;
+  }
+
+  .score-label {
+    font-size: 16px;
+    opacity: 0.9;
+    margin-top: 4px;
+  }
+
+  .credibility-details {
+    flex-grow: 1;
+  }
+
+  .credibility-level {
+    font-size: 24px;
+    margin: 0 0 8px 0;
+  }
+
+  .credibility-explanation {
+    margin: 0;
+    font-size: 16px;
+    opacity: 0.9;
+    line-height: 1.6;
+    margin-top: 8px;
+    font-size: 15px;
+  }
+
+  .reliability-summary {
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.3);
+  }
+
+  .reliability-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    margin-bottom: 8px;
+  }
+
+  .reliability-reason {
+    margin: 0;
+    opacity: 0.9;
+  }
+
+  /* 修改：可信度等級對應的背景色，使用更柔和的配色 */
+  .very-high {
+    background: linear-gradient(135deg, rgba(82, 196, 26, 0.05), rgba(82, 196, 26, 0.15));
+    border: 1px solid rgba(82, 196, 26, 0.3);
+    color: #135200;
+  }
+  
+  .high {
+    background: linear-gradient(135deg, rgba(24, 144, 255, 0.05), rgba(24, 144, 255, 0.15));
+    border: 1px solid rgba(24, 144, 255, 0.3);
+    color: #003a8c;
+  }
+  
+  .medium {
+    background: linear-gradient(135deg, rgba(250, 173, 20, 0.05), rgba(250, 173, 20, 0.15));
+    border: 1px solid rgba(250, 173, 20, 0.3);
+    color: #613400;
+  }
+  
+  .low {
+    background: linear-gradient(135deg, rgba(255, 122, 69, 0.05), rgba(255, 122, 69, 0.15));
+    border: 1px solid rgba(255, 122, 69, 0.3);
+    color: #871400;
+  }
+  
+  .very-low {
+    background: linear-gradient(135deg, rgba(255, 77, 79, 0.05), rgba(255, 77, 79, 0.15));
+    border: 1px solid rgba(255, 77, 79, 0.3);
+    color: #820014;
+  }
+  
+  .credibility-banner {
+    padding: 32px;
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.05);
+  }
+  
+  .score-circle {
+    background: rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+    width: 120px;
+    height: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .score-number {
+    font-size: 40px;
+    font-weight: bold;
+    line-height: 1;
+  }
+  
+  .score-label {
+    font-size: 16px;
+    opacity: 0.8;
+    margin-top: 4px;
+  }
+  
+  .reliability-summary {
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    margin-top: 24px;
+    padding-top: 24px;
+  }
+  
+  .reliability-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    margin-bottom: 12px;
+    opacity: 0.85;
+  }
+  
+  .reliability-reason {
+    margin: 0;
+    opacity: 0.75;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  
+  .credibility-level {
+    font-size: 28px;
+    font-weight: 600;
+    margin: 0 0 12px 0;
+    opacity: 0.9;
+  }
+  
+  .credibility-explanation {
+    line-height: 1.6;
+    opacity: 0.8;
+    font-size: 15px;
   }
   </style>

@@ -1072,7 +1072,13 @@ async def get_all_news(request):
         async with app.ctx.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 await cur.execute(
-                    "SELECT newstitle , news_id, journ, newsclass,news_content ,suggest, score ,crea_date FROM news"
+                    """
+                    SELECT nid, title, content, link, publish_date, location, 
+                           event_type, credibility_score, credibility_level,
+                           factual_score, critical_score, balanced_score, 
+                           source_score, analysis_timestamp
+                    FROM content_analysis
+                    """
                 )
                 newsies = await cur.fetchall()
 
@@ -1082,16 +1088,20 @@ async def get_all_news(request):
                 # 處理每個新聞的數據
                 response = [
                     {
-                        "newstitle": news["newstitle"],
-                        "news_id": news["news_id"],
-                        "journ": news["journ"],
-                        "newsclass": news["newsclass"],
-                        "news_content": news["news_content"],
-                        "suggest": news["suggest"],
-                        "score": news["score"],
-                        "crea_date": (
-                            news["crea_date"].isoformat() if news["crea_date"] else None
-                        ),
+                        "nid": news["nid"],
+                        "title": news["title"],
+                        "content": news["content"],
+                        "link": news["link"],
+                        "publish_date": news["publish_date"],
+                        "location": news["location"],
+                        "event_type": news["event_type"],
+                        "credibility_score": float(news["credibility_score"]) if news["credibility_score"] else 0,
+                        "credibility_level": news["credibility_level"],
+                        "factual_score": float(news["factual_score"]) if news["factual_score"] else 0,
+                        "critical_score": float(news["critical_score"]) if news["critical_score"] else 0,
+                        "balanced_score": float(news["balanced_score"]) if news["balanced_score"] else 0,
+                        "source_score": float(news["source_score"]) if news["source_score"] else 0,
+                        "analysis_timestamp": news["analysis_timestamp"].isoformat() if news["analysis_timestamp"] else None,
                     }
                     for news in newsies
                 ]
@@ -1100,6 +1110,7 @@ async def get_all_news(request):
     except Exception as e:
         print(f"Error in get_all_newsies: {str(e)}")
         return json({"error": str(e)}, status=400)
+
 @app.get("/api/news/<nid>")
 async def get_news_info(request, nid):
     """獲取新聞信息的 API"""
@@ -1107,23 +1118,47 @@ async def get_news_info(request, nid):
         async with app.ctx.pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 await cur.execute(
-                    "SELECT newstitle , news_id, journ, newsclass, news_content, suggest, score, crea_date FROM news WHERE news_id=%s",
+                    """
+                    SELECT nid, title, content, link, publish_date, location,
+                           event_type, credibility_score, credibility_level,
+                           factual_score, critical_score, balanced_score,
+                           source_score, factual_analysis, critical_analysis,
+                           balanced_analysis, source_analysis, verification_guide,
+                           analysis_timestamp
+                    FROM content_analysis 
+                    WHERE nid = %s
+                    """,
                     (nid,),
                 )
-                new = await cur.fetchone()
+                news = await cur.fetchone()
 
-                if not new:
+                if not news:
                     print(f"News ID {nid} 不存在")
-                    return json({"error": "找尋不到該貼文"}, status=404)
+                    return json({"error": "找尋不到該新聞"}, status=404)
 
-                # 處理 datetime 轉換格式
-                news = dict(new)
-                news["crea_date"] = news["crea_date"].isoformat() if news["crea_date"] else None
+                # 處理JSON字段
+                json_fields = ['factual_analysis', 'critical_analysis', 
+                             'balanced_analysis', 'source_analysis', 
+                             'verification_guide']
+                for field in json_fields:
+                    if news[field]:
+                        news[field] = jsonlib.loads(news[field])
 
-                print(f"成功獲取新聞: {news}")  # 添加日志
+                # 處理數值字段
+                number_fields = ['credibility_score', 'factual_score', 
+                               'critical_score', 'balanced_score', 'source_score']
+                for field in number_fields:
+                    if news[field]:
+                        news[field] = float(news[field])
+
+                # 處理時間戳
+                if news["analysis_timestamp"]:
+                    news["analysis_timestamp"] = news["analysis_timestamp"].isoformat()
+
+                print(f"成功獲取新聞: {news}")
                 return json({"news": news}, status=200)
     except Exception as e:
-        print(f"Error in get_news_info: {str(e)}")  # 打印错误日志
+        print(f"Error in get_news_info: {str(e)}")
         return json({"error": str(e)}, status=400)
 
 @app.put("/api/post/update/<pid>")

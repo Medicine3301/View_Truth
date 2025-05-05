@@ -103,6 +103,7 @@ interface Newstate {
 interface news {
     nid: string  // 改為 nid
     link: string
+    img:string
     title: string
     content: string
     publish_date: string

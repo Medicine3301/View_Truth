@@ -2,6 +2,7 @@ CREATE TABLE content_analysis (
     -- 主鍵和基本信息
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     link VARCHAR(255) NOT NULL,
+    img VARCHAR(255) not null,
     title VARCHAR(255) NOT NULL,
     content TEXT NOT NULL,
     publish_date VARCHAR(50),

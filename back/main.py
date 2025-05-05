@@ -19,7 +19,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 #郵件認證的函式導入
 from back.mail import EmailVerifier
 from back.run_spider import run_spider
-from back.geminisuccess import GeminiVerificationSystem, run_verification_system
+from back.geminisuccess import run_verification_system
 
 
 
@@ -83,7 +83,7 @@ async def update_database():
         # 讀取 JSON 文件
         json_path = os.path.join(os.path.dirname(__file__), 'news_assessments.json')
         with open(json_path, 'r', encoding='utf-8') as f:
-            data = jsonlib.load(f)  # Use jsonlib instead of json
+            data = jsonlib.load(f)
             
         if not data.get('assessments'):
             logger.warning("沒有找到需要更新的評估數據")
@@ -94,11 +94,8 @@ async def update_database():
                 for assessment in data['assessments']:
                     # 檢查記錄是否已存在
                     await cur.execute(
-                        """
-                        SELECT nid FROM content_analysis 
-                        WHERE link=% s 
-                        """,
-                        (assessment['link'])
+                        "SELECT nid FROM content_analysis WHERE link = %s",
+                        (assessment['link'],)
                     )
                     exists = await cur.fetchone()
                     
@@ -108,6 +105,7 @@ async def update_database():
                             """
                             UPDATE content_analysis SET
                                 title = %s,
+                                img = %s,
                                 content = %s,
                                 publish_date = %s,
                                 location = %s,
@@ -124,10 +122,11 @@ async def update_database():
                                 source_analysis = %s,
                                 verification_guide = %s,
                                 analysis_timestamp = %s
-                                WHERE link = %s
+                            WHERE link = %s
                             """,
                             (
                                 assessment['title'],
+                                assessment['img'],
                                 assessment['content'],
                                 assessment['publish_date'],
                                 assessment['location'],
@@ -138,11 +137,11 @@ async def update_database():
                                 assessment['critical_score'],
                                 assessment['balanced_score'],
                                 assessment['source_score'],
-                                jsonlib.dumps(assessment['factual_analysis']),  # Use jsonlib instead of json
-                                jsonlib.dumps(assessment['critical_analysis']),  # Use jsonlib instead of json
-                                jsonlib.dumps(assessment['balanced_analysis']),  # Use jsonlib instead of json
-                                jsonlib.dumps(assessment['source_analysis']),   # Use jsonlib instead of json
-                                jsonlib.dumps(assessment['verification_guide']), # Use jsonlib instead of json
+                                jsonlib.dumps(assessment['factual_analysis']),
+                                jsonlib.dumps(assessment['critical_analysis']),
+                                jsonlib.dumps(assessment['balanced_analysis']),
+                                jsonlib.dumps(assessment['source_analysis']),
+                                jsonlib.dumps(assessment['verification_guide']),
                                 assessment['analysis_timestamp'],
                                 assessment['link']
                             )
@@ -152,20 +151,20 @@ async def update_database():
                         await cur.execute(
                             """
                             INSERT INTO content_analysis (
-                                link,
-                                title, content, publish_date, location, event_type,
-                                credibility_score, credibility_level, 
-                                factual_score, critical_score, balanced_score, source_score,
-                                factual_analysis, critical_analysis, balanced_analysis,
-                                source_analysis, verification_guide,
+                                link, img, title, content, publish_date, location,
+                                event_type, credibility_score, credibility_level,
+                                factual_score, critical_score, balanced_score,
+                                source_score, factual_analysis, critical_analysis,
+                                balanced_analysis, source_analysis, verification_guide,
                                 analysis_timestamp
                             ) VALUES (
-                                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
                                 %s, %s, %s, %s, %s, %s, %s
                             )
                             """,
                             (
                                 assessment['link'],
+                                assessment['img'],
                                 assessment['title'],
                                 assessment['content'],
                                 assessment['publish_date'],
@@ -177,22 +176,22 @@ async def update_database():
                                 assessment['critical_score'],
                                 assessment['balanced_score'],
                                 assessment['source_score'],
-                                jsonlib.dumps(assessment['factual_analysis']),  # Use jsonlib instead of json
-                                jsonlib.dumps(assessment['critical_analysis']),  # Use jsonlib instead of json
-                                jsonlib.dumps(assessment['balanced_analysis']),  # Use jsonlib instead of json
-                                jsonlib.dumps(assessment['source_analysis']),   # Use jsonlib instead of json
-                                jsonlib.dumps(assessment['verification_guide']), # Use jsonlib instead of json
+                                jsonlib.dumps(assessment['factual_analysis']),
+                                jsonlib.dumps(assessment['critical_analysis']),
+                                jsonlib.dumps(assessment['balanced_analysis']),
+                                jsonlib.dumps(assessment['source_analysis']),
+                                jsonlib.dumps(assessment['verification_guide']),
                                 assessment['analysis_timestamp']
                             )
                         )
-                        
+                
         logger.info(f"成功更新 {len(data['assessments'])} 條新聞評估數據")
         return True
         
     except FileNotFoundError:
         logger.error("找不到 news_assessments.json 文件")
         return False
-    except jsonlib.JSONDecodeError:  # Use jsonlib instead of json
+    except jsonlib.JSONDecodeError:
         logger.error("JSON 文件解析錯誤")
         return False
     except Exception as e:
@@ -214,10 +213,11 @@ async def setup_services(app, loop):
 
         # 初始化調度器
         scheduler.add_job(
-            execute_spider,
+            update_database,
             'cron',
-            hour=2,
-            id='spider_job'
+            hour=12,
+            minute=1,
+            id='database_job'
         )
         
         # 添加任務監聽器，用於在一個任務完成後觸發下一個任務
@@ -1073,7 +1073,7 @@ async def get_all_news(request):
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 await cur.execute(
                     """
-                    SELECT nid, title, content, link, publish_date, location, 
+                    SELECT nid, title, content, link,img, publish_date, location, 
                            event_type, credibility_score, credibility_level,
                            factual_score, critical_score, balanced_score, 
                            source_score, analysis_timestamp
@@ -1092,6 +1092,7 @@ async def get_all_news(request):
                         "title": news["title"],
                         "content": news["content"],
                         "link": news["link"],
+                        "img": news["img"],
                         "publish_date": news["publish_date"],
                         "location": news["location"],
                         "event_type": news["event_type"],
@@ -1119,7 +1120,7 @@ async def get_news_info(request, nid):
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 await cur.execute(
                     """
-                    SELECT nid, title, content, link, publish_date, location,
+                    SELECT nid, title, content, link,img, publish_date, location,
                            event_type, credibility_score, credibility_level,
                            factual_score, critical_score, balanced_score,
                            source_score, factual_analysis, critical_analysis,

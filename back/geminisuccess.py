@@ -1002,7 +1002,7 @@ def run_verification_system():
     clear_previous_assessments()
     final_assessments = []
     #測試用
-    test_news = news_data[:1]
+    test_news = news_data[:60]
     print(f"開始分析前 所有 篇新聞...")
     
     for idx, news in enumerate(test_news, 1):
@@ -1012,18 +1012,18 @@ def run_verification_system():
             
             # 加入連結處理
             link = news.get('link', 'N/A')  # 從新聞數據中獲取連結
+            img=news.get('img', 'N/A')  # 從新聞數據中獲取圖片連結
             if not link or link == 'N/A':
-
                 # 如果沒有連結，嘗試從段落中提取URL
                 for para in news['paragraph']:
                     urls = re.findall(r'https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+[^\s]*', para)
                     if urls:
                         link = urls[0]
                         break
-            
             content = f"{news['title']}\n"
             for para in news['paragraph']:
                 content += para + "\n"
+
             
             responses = verification_system.verify_with_gemini(content)
             verification_result = verification_system.self_verification(responses, content)
@@ -1032,6 +1032,7 @@ def run_verification_system():
             )
             
             # 更新評估結果中的連結
+            final_assessment['img'] = img
             final_assessment['link'] = link
             final_assessment['news_id'] = idx
             final_assessment['analysis_timestamp'] = verification_system.get_current_timestamp()

@@ -46,6 +46,7 @@ class SethSpider(scrapy.Spider):
         uptime = response.meta['uptime']
         subject = response.meta['subject']
         link=response.url
+        img=response.xpath('//*[@id="Content1"]//img/@src').get()
         content = response.xpath('//*[@id="Content1"]/p/text()').getall()
         
         yield {
@@ -53,6 +54,7 @@ class SethSpider(scrapy.Spider):
             'title': title,
             'subject': subject,
             'uptime': uptime,
+            'img': img,
             'paragraph': content,
            
         }

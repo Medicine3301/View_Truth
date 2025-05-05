@@ -46,7 +46,7 @@
                                     <a-card hoverable class="news-card" :class="getRandomClass()"
                                         @click="goToNewspage(news.nid)">
                                         <div class="news-image">
-                                            <img :src="news.image || 'default-news-image.jpg'" :alt="news.title" />
+                                            <img :src="news.img || 'default-news-image.jpg'" :alt="news.title" />
                                         </div>
                                         <div class="news-content">
                                             <h3 class="news-title">{{ news.title }}</h3>

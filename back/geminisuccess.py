@@ -521,30 +521,25 @@ class GeminiVerificationSystem:
     def improve_title_and_content(self, title: str, content: str) -> Tuple[str, str]:
         """改進標題和內容的呈現品質"""
         prompt = f"""
-        請分析並改進以下新聞的標題和內容。保持原意的前提下，提供更客觀、準確的表達方式。必須要中文回應。
+        請改進以下新聞的標題和內容，保持原意前提下提供更客觀、準確的表達。
+        直接給出改進結果，無需解釋。
 
         原標題：{title}
         原內容：{content}
 
-        請提供：
-        1. 改進後的標題：（更客觀、清晰的標題）
-        2. 改進後的內容：（去除誇張、偏見的描述，保持事實陳述）
-
-        回覆格式：
-        標題：改進後的標題
-        內容：改進後的內容
+        標題：
+        內容：
         """
 
         try:
             response = self.query_gemini_api(prompt)
             text = response.text if hasattr(response, 'text') else str(response)
 
-            # 提取改進後的標題
+            # 提取改進後的標題和內容
             title_match = re.search(r'標題：(.+?)(?:\n|$)', text)
-            improved_title = title_match.group(1).strip() if title_match else title
-
-            # 提取改進後的內容
             content_match = re.search(r'內容：(.+?)(?=\Z)', text, re.DOTALL)
+            
+            improved_title = title_match.group(1).strip() if title_match else title
             improved_content = content_match.group(1).strip() if content_match else content
 
             return improved_title, improved_content
@@ -616,28 +611,129 @@ class GeminiVerificationSystem:
             raise
 
     def extract_key_findings(self, text: str) -> List[str]:
-        """提取關鍵發現"""
+        """提取關鍵發現
+        
+        改進:
+        1. 增加多個可能的標題匹配模式
+        2. 處理多種列表格式
+        3. 添加多重分隔符處理
+        4. 增加結果驗證
+        """
         findings = []
-        # 尋找關鍵事實聲明部分
-        pattern = r'關鍵事實聲明[：:](.*?)(?=\d\.|\Z)'
-        match = re.search(pattern, text, re.DOTALL)
-        if match:
-            # 分割並清理每個發現
-            raw_findings = match.group(1).split('\n')
-            findings = [f.strip('- *').strip() for f in raw_findings if f.strip()]
-        return findings or ["無法提取關鍵發現"]
-
+        
+        # 多個可能的標題模式
+        patterns = [
+            r'關鍵事實聲明[：:](.*?)(?=\d\.|評分理由|可信度評分|一致性評估|\Z)',
+            r'主要事實[：:](.*?)(?=\d\.|評分理由|可信度評分|一致性評估|\Z)',
+            r'事實陳述[：:](.*?)(?=\d\.|評分理由|可信度評分|一致性評估|\Z)',
+            r'關鍵發現[：:](.*?)(?=\d\.|評分理由|可信度評分|一致性評估|\Z)'
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, text, re.DOTALL)
+            if match:
+                content = match.group(1).strip()
+                
+                # 處理不同的分隔方式
+                possible_splits = [
+                    content.split('\n'),
+                    content.split('。'),
+                    content.split(';'),
+                    content.split('；')
+                ]
+                
+                # 選擇產生最多有效項目的分割方式
+                valid_findings = []
+                for split_result in possible_splits:
+                    current_findings = []
+                    for item in split_result:
+                        # 清理項目
+                        cleaned = re.sub(r'^[\d\-\s*•]+', '', item.strip())
+                        cleaned = cleaned.strip('。；;,.，、')
+                        if cleaned and len(cleaned) > 5:  # 確保內容有意義
+                            current_findings.append(cleaned)
+                    
+                    if len(current_findings) > len(valid_findings):
+                        valid_findings = current_findings
+                
+                if valid_findings:
+                    findings.extend(valid_findings)
+                    break  # 如果找到有效結果就停止搜索
+        
+        # 結果驗證與預設值處理
+        if not findings:
+            # 嘗試提取任何看起來像是事實陳述的句子
+            sentences = re.findall(r'[^。！？\n]+[。！？]', text)
+            findings = [s.strip() for s in sentences[:3] if len(s.strip()) > 10]
+        
+        return findings or ["需要人工審核關鍵發現"]
+    
     def extract_main_basis(self, text: str) -> List[str]:
-        """提取主要依據"""
+        """提取主要依據
+        
+        改進:
+        1. 增加多個可能的標題匹配模式
+        2. 添加上下文邊界處理
+        3. 改進分割和清理邏輯
+        4. 增加內容驗證
+        """
         basis = []
-        # 尋找評分理由部分
-        pattern = r'評分理由[：:](.*?)(?=\Z)'
-        match = re.search(pattern, text, re.DOTALL)
-        if match:
-            # 分割並清理每個依據
-            raw_basis = match.group(1).split('\n')
-            basis = [b.strip('- *').strip() for b in raw_basis if b.strip()]
-        return basis or ["無法提取評分依據"]
+        
+        # 多個可能的標題模式
+        patterns = [
+            r'評分理由[：:](.*?)(?=總體評價|綜合分析|結論|\d\.|可信度評分|\Z)',
+            r'評分依據[：:](.*?)(?=總體評價|綜合分析|結論|\d\.|可信度評分|\Z)',
+            r'主要依據[：:](.*?)(?=總體評價|綜合分析|結論|\d\.|可信度評分|\Z)',
+            r'判斷理由[：:](.*?)(?=總體評價|綜合分析|結論|\d\.|可信度評分|\Z)'
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, text, re.DOTALL)
+            if match:
+                content = match.group(1).strip()
+                
+                # 多種分隔方式處理
+                separators = ['\n', '。', '；', ';']
+                best_basis = []
+                
+                for separator in separators:
+                    current_basis = []
+                    items = content.split(separator)
+                    
+                    for item in items:
+                        # 清理和驗證每個項目
+                        cleaned = re.sub(r'^[\d\-\s*•]+', '', item.strip())
+                        cleaned = cleaned.strip('。；;,.，、')
+                        
+                        # 內容驗證
+                        if cleaned and len(cleaned) > 10:  # 確保足夠的內容長度
+                            if re.search(r'[因為基於由於顯示表明證據]', cleaned):  # 檢查是否包含表示原因的詞
+                                current_basis.append(cleaned)
+                    
+                    if len(current_basis) > len(best_basis):
+                        best_basis = current_basis
+                
+                if best_basis:
+                    basis = best_basis
+                    break
+        
+        # 如果沒有找到明確的評分理由，嘗試提取相關內容
+        if not basis:
+            # 搜索包含特定關鍵詞的句子
+            relevant_sentences = []
+            keywords = ['因為', '基於', '由於', '證據', '顯示', '表明', '分析', '評估']
+            sentences = re.split(r'[。！？\n]', text)
+            
+            for sentence in sentences:
+                if any(keyword in sentence for keyword in keywords):
+                    cleaned = sentence.strip()
+                    if cleaned and len(cleaned) > 10:
+                        relevant_sentences.append(cleaned)
+            
+            if relevant_sentences:
+                basis = relevant_sentences[:3]  # 取最相關的前三句
+        
+        return basis or ["需要補充評分依據"]
 
     def extract_problems(self, text: str) -> List[str]:
         """提取問題點 - 對應資料庫 critical_analysis 欄位
@@ -722,44 +818,66 @@ class GeminiVerificationSystem:
         return points or ["無法提取反對論點"]
 
     def extract_source_reliability(self, text: str) -> Dict[str, Any]:
-        """提取來源可靠性分析"""
+        """改進的來源可靠性分析提取方法"""
         reliability = {
             "level": "未知",
             "reason": "無法確定來源可靠性",
             "content_type": "未分類",
             "quality_scores": {
-                "completeness": 0,
-                "source_reliability": 0,
-                "timeliness": 0,
-                "verifiability": 0
+                "completeness": 50,      # 更改默認值為中等分數
+                "source_reliability": 50,
+                "timeliness": 50,
+                "verifiability": 50,
             },
             "domain_expertise": "未指定"
         }
         
         # 提取內容屬性
-        content_type_pattern = r'內容屬性[：:](.*?)(?=\d\.|\Z)'
-        if match := re.search(content_type_pattern, text, re.DOTALL):
-            reliability["content_type"] = match.group(1).strip()
+        content_type_match = re.search(r'內容屬性[：:]\s*[-•]?\s*([^•\n]+)', text)
+        if content_type_match:
+            reliability["content_type"] = content_type_match.group(1).strip()
         
-        # 提取質量評分
-        quality_patterns = {
-            "completeness": r'資料完整性[：:]\s*(\d+)',
-            "source_reliability": r'來源可靠性[：:]\s*(\d+)',
-            "timeliness": r'時效性[：:]\s*(\d+)',
-            "verifiability": r'可驗證性[：:]\s*(\d+)'
+        # 改進的質量評分提取邏輯
+        score_patterns = {
+            "completeness": [
+                r'資料完整性[：:]\s*(\d+)',
+                r'完整性[：:]\s*(\d+)',
+                r'資訊完整度[：:]\s*(\d+)'
+            ],
+            "source_reliability": [
+                r'來源可靠性[：:]\s*(\d+)',
+                r'可靠性[：:]\s*(\d+)',
+                r'來源評分[：:]\s*(\d+)'
+            ],
+            "timeliness": [
+                r'時效性[：:]\s*(\d+)',
+                r'時間性[：:]\s*(\d+)',
+                r'時效評分[：:]\s*(\d+)'
+            ],
+            "verifiability": [
+                r'可驗證性[：:]\s*(\d+)',
+                r'驗證性[：:]\s*(\d+)',
+                r'可驗證度[：:]\s*(\d+)'
+            ]
         }
         
-        for key, pattern in quality_patterns.items():
-            if match := re.search(pattern, text):
-                reliability["quality_scores"][key] = int(match.group(1))
+        # 對每個維度使用多個模式進行匹配
+        for key, patterns in score_patterns.items():
+            for pattern in patterns:
+                if match := re.search(pattern, text):
+                    try:
+                        score = int(match.group(1))
+                        if 0 <= score <= 100:  # 確保分數在有效範圍內
+                            reliability["quality_scores"][key] = score
+                            break  # 找到有效分數就停止該維度的搜索
+                    except ValueError:
+                        continue
         
-        # 提取專業領域
-        domain_pattern = r'所需專業領域[：:](.*?)(?=建議|\Z)'
-        if match := re.search(domain_pattern, text, re.DOTALL):
-            reliability["domain_expertise"] = match.group(1).strip()
+        # 計算平均分數
+        scores = reliability["quality_scores"].values()
+        avg_score = sum(scores) / len(scores)
         
         # 設定可靠性等級
-        avg_score = sum(reliability["quality_scores"].values()) / 4
         if avg_score >= 80:
             reliability["level"] = "高度可靠"
         elif avg_score >= 60:
@@ -769,10 +887,17 @@ class GeminiVerificationSystem:
         else:
             reliability["level"] = "可靠性存疑"
         
-        # 提取評分依據作為原因
-        reason_pattern = r'評分依據[：:](.*?)(?=專業建議|\Z)'
-        if match := re.search(reason_pattern, text, re.DOTALL):
-            reliability["reason"] = match.group(1).strip()
+        # 提取評分依據
+        reason_matches = [
+            re.search(r'評分依據[：:](.*?)(?=專業建議|\Z)', text, re.DOTALL),
+            re.search(r'評估理由[：:](.*?)(?=\d\.|\Z)', text, re.DOTALL),
+            re.search(r'分析依據[：:](.*?)(?=\d\.|\Z)', text, re.DOTALL)
+        ]
+        
+        for match in reason_matches:
+            if match:
+                reliability["reason"] = match.group(1).strip()
+                break
         
         return reliability
 
@@ -1002,7 +1127,7 @@ def run_verification_system():
     clear_previous_assessments()
     final_assessments = []
     #測試用
-    test_news = news_data[:60]
+    test_news = news_data[:3]
     print(f"開始分析前 所有 篇新聞...")
     
     for idx, news in enumerate(test_news, 1):

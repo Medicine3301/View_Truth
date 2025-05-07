@@ -215,8 +215,8 @@ async def setup_services(app, loop):
         scheduler.add_job(
             update_database,
             'cron',
-            hour=12,
-            minute=1,
+            hour=18,
+            minute=33,
             id='database_job'
         )
         

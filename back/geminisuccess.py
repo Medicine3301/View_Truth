@@ -10,7 +10,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 logger = logging.getLogger(__name__)
 
 # Gemini API 配置
-GEMINI_API_KEY = "AIzaSyChZPbwnQY-JPm7cPU8kSDn3PiO1Amfo2Q"
+GEMINI_API_KEY = "AIzaSyAsZKmXBumC_bXgLRzzYAvAcfeMY11R9B4"
 
 class GeminiVerificationSystem:
     def __init__(self, api_key=GEMINI_API_KEY):
@@ -672,68 +672,102 @@ class GeminiVerificationSystem:
         """提取主要依據
         
         改進:
-        1. 增加多個可能的標題匹配模式
+        1. 增加更多匹配模式
         2. 添加上下文邊界處理
         3. 改進分割和清理邏輯
         4. 增加內容驗證
+        5. 增加備用提取機制
         """
         basis = []
         
-        # 多個可能的標題模式
-        patterns = [
-            r'評分理由[：:](.*?)(?=總體評價|綜合分析|結論|\d\.|可信度評分|\Z)',
-            r'評分依據[：:](.*?)(?=總體評價|綜合分析|結論|\d\.|可信度評分|\Z)',
-            r'主要依據[：:](.*?)(?=總體評價|綜合分析|結論|\d\.|可信度評分|\Z)',
-            r'判斷理由[：:](.*?)(?=總體評價|綜合分析|結論|\d\.|可信度評分|\Z)'
-        ]
-        
-        for pattern in patterns:
-            match = re.search(pattern, text, re.DOTALL)
-            if match:
-                content = match.group(1).strip()
-                
-                # 多種分隔方式處理
-                separators = ['\n', '。', '；', ';']
-                best_basis = []
-                
-                for separator in separators:
-                    current_basis = []
-                    items = content.split(separator)
+        try:
+            # 多個可能的標題模式
+            patterns = [
+                r'評分理由[：:](.*?)(?=總體評價|綜合分析|結論|\d\.|可信度評分|\Z)',
+                r'評分依據[：:](.*?)(?=總體評價|綜合分析|結論|\d\.|可信度評分|\Z)',
+                r'主要依據[：:](.*?)(?=總體評價|綜合分析|結論|\d\.|可信度評分|\Z)',
+                r'判斷理由[：:](.*?)(?=總體評價|綜合分析|結論|\d\.|可信度評分|\Z)',
+                r'分析依據[：:](.*?)(?=總體評價|綜合分析|結論|\d\.|可信度評分|\Z)',
+                r'評估理由[：:](.*?)(?=總體評價|綜合分析|結論|\d\.|可信度評分|\Z)',
+                r'判斷基礎[：:](.*?)(?=總體評價|綜合分析|結論|\d\.|可信度評分|\Z)',
+                r'評分說明[：:](.*?)(?=總體評價|綜合分析|結論|\d\.|可信度評分|\Z)'
+            ]
+            
+            # 嘗試從主要模式中提取
+            for pattern in patterns:
+                match = re.search(pattern, text, re.DOTALL)
+                if match:
+                    content = match.group(1).strip()
                     
-                    for item in items:
-                        # 清理和驗證每個項目
-                        cleaned = re.sub(r'^[\d\-\s*•]+', '', item.strip())
-                        cleaned = cleaned.strip('。；;,.，、')
+                    # 多種分隔方式處理
+                    separators = ['\n', '。', '；', ';', '，', ',', '、']
+                    best_basis = []
+                    
+                    for separator in separators:
+                        current_basis = []
+                        items = content.split(separator)
                         
-                        # 內容驗證
-                        if cleaned and len(cleaned) > 10:  # 確保足夠的內容長度
-                            if re.search(r'[因為基於由於顯示表明證據]', cleaned):  # 檢查是否包含表示原因的詞
-                                current_basis.append(cleaned)
+                        for item in items:
+                            # 清理和驗證每個項目
+                            cleaned = re.sub(r'^[\d\-\s*•]+', '', item.strip())
+                            cleaned = cleaned.strip('。；;,.，、')
+                            
+                            # 內容驗證
+                            if cleaned and len(cleaned) > 10:  # 確保足夠的內容長度
+                                if re.search(r'[因為基於由於顯示表明證據]', cleaned):  # 檢查是否包含表示原因的詞
+                                    current_basis.append(cleaned)
+                        
+                        if len(current_basis) > len(best_basis):
+                            best_basis = current_basis
                     
-                    if len(current_basis) > len(best_basis):
-                        best_basis = current_basis
+                    if best_basis:
+                        basis = best_basis
+                        break
+            
+            # 如果沒有找到明確的評分理由，嘗試備用提取機制
+            if not basis:
+                # 搜索包含特定關鍵詞的句子
+                relevant_sentences = []
+                keywords = ['因為', '基於', '由於', '證據', '顯示', '表明', '分析', '評估', 
+                          '原因', '理由', '依據', '根據', '由於', '因此', '所以', '可見']
                 
-                if best_basis:
-                    basis = best_basis
-                    break
-        
-        # 如果沒有找到明確的評分理由，嘗試提取相關內容
-        if not basis:
-            # 搜索包含特定關鍵詞的句子
-            relevant_sentences = []
-            keywords = ['因為', '基於', '由於', '證據', '顯示', '表明', '分析', '評估']
-            sentences = re.split(r'[。！？\n]', text)
+                # 分割文本為句子
+                sentences = re.split(r'[。！？\n]', text)
+                
+                for sentence in sentences:
+                    if any(keyword in sentence for keyword in keywords):
+                        cleaned = sentence.strip()
+                        if cleaned and len(cleaned) > 10:
+                            # 進一步驗證句子的有效性
+                            if re.search(r'[因為基於由於顯示表明證據]', cleaned):
+                                relevant_sentences.append(cleaned)
+                
+                if relevant_sentences:
+                    # 根據句子長度和關鍵詞出現次數排序
+                    scored_sentences = []
+                    for sentence in relevant_sentences:
+                        score = len(sentence)  # 基礎分數為句子長度
+                        # 根據關鍵詞出現次數增加分數
+                        score += sum(1 for keyword in keywords if keyword in sentence) * 5
+                        scored_sentences.append((sentence, score))
+                    
+                    # 按分數排序並取前三個
+                    scored_sentences.sort(key=lambda x: x[1], reverse=True)
+                    basis = [sentence for sentence, _ in scored_sentences[:3]]
             
-            for sentence in sentences:
-                if any(keyword in sentence for keyword in keywords):
-                    cleaned = sentence.strip()
-                    if cleaned and len(cleaned) > 10:
-                        relevant_sentences.append(cleaned)
+            # 如果仍然沒有找到任何依據，使用預設值
+            if not basis:
+                basis = ["需要補充評分依據"]
             
-            if relevant_sentences:
-                basis = relevant_sentences[:3]  # 取最相關的前三句
-        
-        return basis or ["需要補充評分依據"]
+            # 確保返回的依據數量合理
+            if len(basis) > 5:
+                basis = basis[:5]  # 限制最多返回5個依據
+            
+            return basis
+            
+        except Exception as e:
+            logger.error(f"提取主要依據時發生錯誤: {e}")
+            return ["需要補充評分依據"]
 
     def extract_problems(self, text: str) -> List[str]:
         """提取問題點 - 對應資料庫 critical_analysis 欄位
@@ -779,19 +813,92 @@ class GeminiVerificationSystem:
             List[str]: 提取出的邏輯謬誤列表，每個謬誤為一個字符串
         """
         fallacies = []
-        # 使用更精確的模式匹配邏輯分析部分
-        pattern = r'邏輯分析[：:](.*?)(?=\d\.|\Z)'
-        match = re.search(pattern, text, re.DOTALL)
-        if match:
-            # 分割並清理每個謬誤，確保資料品質
-            raw_fallacies = match.group(1).split('\n')
-            fallacies = [f.strip('- *。，：').strip() for f in raw_fallacies if f.strip()]
+        try:
+            # 多個可能的標題模式
+            patterns = [
+                r'邏輯分析[：:](.*?)(?=\d\.|\Z)',
+                r'邏輯謬誤[：:](.*?)(?=\d\.|\Z)',
+                r'邏輯問題[：:](.*?)(?=\d\.|\Z)',
+                r'邏輯錯誤[：:](.*?)(?=\d\.|\Z)',
+                r'邏輯缺陷[：:](.*?)(?=\d\.|\Z)',
+                r'邏輯矛盾[：:](.*?)(?=\d\.|\Z)'
+            ]
             
-            # 過濾無效或過短的謬誤描述
-            fallacies = [f for f in fallacies if len(f) > 5 and len(f) < 500]
-        
-        # 如果沒有找到有效的邏輯謬誤，返回預設值
-        return fallacies or ["需要進一步分析邏輯謬誤"]
+            # 嘗試從主要模式中提取
+            for pattern in patterns:
+                match = re.search(pattern, text, re.DOTALL)
+                if match:
+                    content = match.group(1).strip()
+                    
+                    # 多種分隔方式處理
+                    separators = ['\n', '。', '；', ';', '，', ',', '、']
+                    best_fallacies = []
+                    
+                    for separator in separators:
+                        current_fallacies = []
+                        items = content.split(separator)
+                        
+                        for item in items:
+                            # 清理和驗證每個項目
+                            cleaned = re.sub(r'^[\d\-\s*•]+', '', item.strip())
+                            cleaned = cleaned.strip('。；;,.，、')
+                            
+                            # 內容驗證
+                            if cleaned and len(cleaned) > 10:  # 確保足夠的內容長度
+                                if re.search(r'[謬誤錯誤矛盾缺陷問題]', cleaned):  # 檢查是否包含表示邏輯謬誤的詞
+                                    current_fallacies.append(cleaned)
+                        
+                        if len(current_fallacies) > len(best_fallacies):
+                            best_fallacies = current_fallacies
+                    
+                    if best_fallacies:
+                        fallacies = best_fallacies
+                        break
+            
+            # 如果沒有找到明確的邏輯謬誤，嘗試備用提取機制
+            if not fallacies:
+                # 搜索包含特定關鍵詞的句子
+                relevant_sentences = []
+                keywords = ['謬誤', '錯誤', '矛盾', '缺陷', '問題', '不當', '不合理', 
+                          '不正確', '不準確', '不完整', '不充分', '不適當', '不恰當']
+                
+                # 分割文本為句子
+                sentences = re.split(r'[。！？\n]', text)
+                
+                for sentence in sentences:
+                    if any(keyword in sentence for keyword in keywords):
+                        cleaned = sentence.strip()
+                        if cleaned and len(cleaned) > 10:
+                            # 進一步驗證句子的有效性
+                            if re.search(r'[謬誤錯誤矛盾缺陷問題]', cleaned):
+                                relevant_sentences.append(cleaned)
+                
+                if relevant_sentences:
+                    # 根據句子長度和關鍵詞出現次數排序
+                    scored_sentences = []
+                    for sentence in relevant_sentences:
+                        score = len(sentence)  # 基礎分數為句子長度
+                        # 根據關鍵詞出現次數增加分數
+                        score += sum(1 for keyword in keywords if keyword in sentence) * 5
+                        scored_sentences.append((sentence, score))
+                    
+                    # 按分數排序並取前三個
+                    scored_sentences.sort(key=lambda x: x[1], reverse=True)
+                    fallacies = [sentence for sentence, _ in scored_sentences[:3]]
+            
+            # 如果仍然沒有找到任何謬誤，使用預設值
+            if not fallacies:
+                fallacies = ["需要進一步分析邏輯謬誤"]
+            
+            # 確保返回的謬誤數量合理
+            if len(fallacies) > 5:
+                fallacies = fallacies[:5]  # 限制最多返回5個謬誤
+            
+            return fallacies
+            
+        except Exception as e:
+            logger.error(f"提取邏輯謬誤時發生錯誤: {e}")
+            return ["需要進一步分析邏輯謬誤"]
 
     def extract_supporting_points(self, text: str) -> List[str]:
         """提取支持論點"""
@@ -824,7 +931,7 @@ class GeminiVerificationSystem:
             "reason": "無法確定來源可靠性",
             "content_type": "未分類",
             "quality_scores": {
-                "completeness": 50,      # 更改默認值為中等分數
+                "completeness": 50,
                 "source_reliability": 50,
                 "timeliness": 50,
                 "verifiability": 50,
@@ -832,74 +939,153 @@ class GeminiVerificationSystem:
             "domain_expertise": "未指定"
         }
         
-        # 提取內容屬性
-        content_type_match = re.search(r'內容屬性[：:]\s*[-•]?\s*([^•\n]+)', text)
-        if content_type_match:
-            reliability["content_type"] = content_type_match.group(1).strip()
-        
-        # 改進的質量評分提取邏輯
-        score_patterns = {
-            "completeness": [
-                r'資料完整性[：:]\s*(\d+)',
-                r'完整性[：:]\s*(\d+)',
-                r'資訊完整度[：:]\s*(\d+)'
-            ],
-            "source_reliability": [
-                r'來源可靠性[：:]\s*(\d+)',
-                r'可靠性[：:]\s*(\d+)',
-                r'來源評分[：:]\s*(\d+)'
-            ],
-            "timeliness": [
-                r'時效性[：:]\s*(\d+)',
-                r'時間性[：:]\s*(\d+)',
-                r'時效評分[：:]\s*(\d+)'
-            ],
-            "verifiability": [
-                r'可驗證性[：:]\s*(\d+)',
-                r'驗證性[：:]\s*(\d+)',
-                r'可驗證度[：:]\s*(\d+)'
+        try:
+            # 提取內容屬性 - 增加更多匹配模式
+            content_type_patterns = [
+                r'內容屬性[：:]\s*[-•]?\s*([^•\n]+)',
+                r'資訊類型[：:]\s*[-•]?\s*([^•\n]+)',
+                r'內容分類[：:]\s*[-•]?\s*([^•\n]+)',
+                r'類型[：:]\s*[-•]?\s*([^•\n]+)'
             ]
-        }
-        
-        # 對每個維度使用多個模式進行匹配
-        for key, patterns in score_patterns.items():
-            for pattern in patterns:
+            
+            for pattern in content_type_patterns:
                 if match := re.search(pattern, text):
-                    try:
-                        score = int(match.group(1))
-                        if 0 <= score <= 100:  # 確保分數在有效範圍內
-                            reliability["quality_scores"][key] = score
-                            break  # 找到有效分數就停止該維度的搜索
-                    except ValueError:
-                        continue
-        
-        # 計算平均分數
-        scores = reliability["quality_scores"].values()
-        avg_score = sum(scores) / len(scores)
-        
-        # 設定可靠性等級
-        if avg_score >= 80:
-            reliability["level"] = "高度可靠"
-        elif avg_score >= 60:
-            reliability["level"] = "較為可靠"
-        elif avg_score >= 40:
-            reliability["level"] = "一般可靠"
-        else:
-            reliability["level"] = "可靠性存疑"
-        
-        # 提取評分依據
-        reason_matches = [
-            re.search(r'評分依據[：:](.*?)(?=專業建議|\Z)', text, re.DOTALL),
-            re.search(r'評估理由[：:](.*?)(?=\d\.|\Z)', text, re.DOTALL),
-            re.search(r'分析依據[：:](.*?)(?=\d\.|\Z)', text, re.DOTALL)
-        ]
-        
-        for match in reason_matches:
-            if match:
-                reliability["reason"] = match.group(1).strip()
-                break
-        
-        return reliability
+                    reliability["content_type"] = match.group(1).strip()
+                    break
+            
+            # 改進的質量評分提取邏輯
+            score_patterns = {
+                "completeness": [
+                    r'資料完整性[：:]\s*(\d+)',
+                    r'完整性[：:]\s*(\d+)',
+                    r'資訊完整度[：:]\s*(\d+)',
+                    r'完整度[：:]\s*(\d+)',
+                    r'完整[：:]\s*(\d+)',
+                    r'完整性評分[：:]\s*(\d+)'
+                ],
+                "source_reliability": [
+                    r'來源可靠性[：:]\s*(\d+)',
+                    r'可靠性[：:]\s*(\d+)',
+                    r'來源評分[：:]\s*(\d+)',
+                    r'可信度[：:]\s*(\d+)',
+                    r'可靠度[：:]\s*(\d+)',
+                    r'來源可信度[：:]\s*(\d+)'
+                ],
+                "timeliness": [
+                    r'時效性[：:]\s*(\d+)',
+                    r'時間性[：:]\s*(\d+)',
+                    r'時效評分[：:]\s*(\d+)',
+                    r'即時性[：:]\s*(\d+)',
+                    r'時效[：:]\s*(\d+)',
+                    r'時間相關性[：:]\s*(\d+)'
+                ],
+                "verifiability": [
+                    r'可驗證性[：:]\s*(\d+)',
+                    r'驗證性[：:]\s*(\d+)',
+                    r'可驗證度[：:]\s*(\d+)',
+                    r'驗證度[：:]\s*(\d+)',
+                    r'可驗證[：:]\s*(\d+)',
+                    r'驗證評分[：:]\s*(\d+)'
+                ]
+            }
+            
+            # 對每個維度使用多個模式進行匹配
+            for key, patterns in score_patterns.items():
+                for pattern in patterns:
+                    if match := re.search(pattern, text):
+                        try:
+                            score = int(match.group(1))
+                            if 0 <= score <= 100:  # 確保分數在有效範圍內
+                                reliability["quality_scores"][key] = score
+                                break  # 找到有效分數就停止該維度的搜索
+                        except (ValueError, TypeError):
+                            continue
+            
+            # 如果沒有找到任何分數，嘗試從文本描述中推斷
+            if all(score == 50 for score in reliability["quality_scores"].values()):
+                self._infer_scores_from_text(text, reliability)
+            
+            # 計算平均分數
+            scores = reliability["quality_scores"].values()
+            avg_score = sum(scores) / len(scores)
+            
+            # 設定可靠性等級
+            if avg_score >= 80:
+                reliability["level"] = "高度可靠"
+            elif avg_score >= 60:
+                reliability["level"] = "較為可靠"
+            elif avg_score >= 40:
+                reliability["level"] = "一般可靠"
+            else:
+                reliability["level"] = "可靠性存疑"
+            
+            # 提取評分依據 - 增加更多匹配模式
+            reason_patterns = [
+                r'評分依據[：:](.*?)(?=專業建議|\Z)',
+                r'評估理由[：:](.*?)(?=\d\.|\Z)',
+                r'分析依據[：:](.*?)(?=\d\.|\Z)',
+                r'判斷理由[：:](.*?)(?=\d\.|\Z)',
+                r'評分說明[：:](.*?)(?=\d\.|\Z)',
+                r'評估說明[：:](.*?)(?=\d\.|\Z)'
+            ]
+            
+            for pattern in reason_patterns:
+                if match := re.search(pattern, text, re.DOTALL):
+                    reliability["reason"] = match.group(1).strip()
+                    break
+            
+            return reliability
+            
+        except Exception as e:
+            logger.error(f"提取來源可靠性時發生錯誤: {e}")
+            return reliability
+    
+    def _infer_scores_from_text(self, text: str, reliability: Dict[str, Any]) -> None:
+        """從文本描述中推斷分數"""
+        try:
+            # 定義關鍵詞和對應的分數範圍
+            score_indicators = {
+                "completeness": {
+                    "high": ["完整", "詳盡", "全面", "充分"],
+                    "medium": ["一般", "基本", "部分"],
+                    "low": ["不完整", "缺乏", "不足"]
+                },
+                "source_reliability": {
+                    "high": ["可靠", "權威", "可信", "專業"],
+                    "medium": ["一般", "基本", "尚可"],
+                    "low": ["不可靠", "存疑", "可疑"]
+                },
+                "timeliness": {
+                    "high": ["即時", "最新", "及時", "當下"],
+                    "medium": ["一般", "尚可", "基本"],
+                    "low": ["過時", "陳舊", "延遲"]
+                },
+                "verifiability": {
+                    "high": ["可驗證", "可查證", "可確認"],
+                    "medium": ["部分可驗證", "基本可查"],
+                    "low": ["難以驗證", "無法確認"]
+                }
+            }
+            
+            # 對每個維度進行評分
+            for dimension, indicators in score_indicators.items():
+                score = 50  # 預設中等分數
+                
+                # 檢查高、中、低分數的關鍵詞
+                for level, keywords in indicators.items():
+                    if any(keyword in text for keyword in keywords):
+                        if level == "high":
+                            score = 80
+                        elif level == "medium":
+                            score = 50
+                        else:
+                            score = 20
+                        break
+                
+                reliability["quality_scores"][dimension] = score
+                
+        except Exception as e:
+            logger.error(f"從文本推斷分數時發生錯誤: {e}")
 
     def extract_verification_requirements(self, text: str) -> List[str]:
         """提取驗證要求"""
@@ -1130,7 +1316,7 @@ def run_verification_system():
     test_news = news_data[:3]
     print(f"開始分析前 所有 篇新聞...")
     
-    for idx, news in enumerate(test_news, 1):
+    for idx, news in enumerate(news_data[:14], 1):
         try:
             print(f"\n處理第 {idx} 篇新聞:")
             print(f"標題: {news['title']}")
